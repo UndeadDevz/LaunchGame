@@ -2,26 +2,22 @@
   "name": "CannonGame",
   "tree": {
     "$className": "DataModel",
-
     "ReplicatedStorage": {
-      "$className": "ReplicatedStorage",
-      "Shared": {
-        "$path": "src/shared"
-      }
+      "$path": "src/shared"
     },
-
     "ServerScriptService": {
       "$path": "src/server"
     },
-
     "StarterPlayer": {
-      "StarterPlayerScripts": {
-        "Rojo": {
-          "$path": "src/client"
-        }
-      },
       "StarterCharacterScripts": {
         "$path": "src/character"
+      },
+      "StarterPlayerScripts": {
+        "$path": "src/client"
+      },
+      "$properties": {
+        "CameraMaxZoomDistance": 128.0,
+        "CharacterUseJumpPower": false
       }
     }
   }
