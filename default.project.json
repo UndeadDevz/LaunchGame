@@ -1,5 +1,5 @@
 {
-  "name": "fly",
+  "name": "CannonGame",
   "tree": {
     "$className": "DataModel",
 
@@ -16,7 +16,9 @@
 
     "StarterPlayer": {
       "StarterPlayerScripts": {
-        "$path": "src/client"
+        "Rojo": {
+          "$path": "src/client"
+        }
       },
       "StarterCharacterScripts": {
         "$path": "src/character"
