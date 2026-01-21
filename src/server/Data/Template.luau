@@ -6,7 +6,6 @@ return {
 	Currency = 200,
 	Currency2 = 0, -- Gems
 	Rebirth = 0,
-	BestZone = 0,
 	Music = true,
 	ShowOtherPets = true,
 

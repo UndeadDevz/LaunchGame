@@ -5,7 +5,7 @@ DataManager.Profiles = {}
 
 -- Lista de valores de PlayerData que se sincronizan automaticamente
 local PlayerDataValues = {
-	"Currency", "Currency2", "Rebirth", "BestZone", "Music",
+	"Currency", "Currency2", "Rebirth", "Music",
 	"ShowOtherPets", "EggsHatched", "TotalCurrency", "GemUpgrade1", "GemUpgrade2"
 }
 

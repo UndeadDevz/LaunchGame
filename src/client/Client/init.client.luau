@@ -806,6 +806,9 @@ end)
 --// Pet Follow
 -- Credits to azypro777 for helping out with this part!
 local Spacing, PetSize, MaxClimbHeight = 5, 3, 6
+local FloatHeight = 2 -- Altura base de flotacion
+local BobAmplitude = 0.5 -- Amplitud de la oscilacion
+local BobSpeed = 3 -- Velocidad de la oscilacion
 
 local RayParams = RaycastParams.new()
 local RayDirection = Vector3.new(0, -500, 0)
@@ -894,6 +897,10 @@ function PetMovement()
 			if RayResult then
 				Y = RayResult.Position.Y + Pet.PrimaryPart.Size.Y/2
 			end
+
+			-- Flotacion y oscilacion
+			local BobOffset = math.sin(tick() * BobSpeed + i * 0.5) * BobAmplitude
+			Y = Y + FloatHeight + BobOffset
 
 			local TargetCFrame = CFrame.new(HumanoidRootPart.CFrame.X, 0, HumanoidRootPart.CFrame.Z) * HumanoidRootPart.CFrame.Rotation * CFrame.new(X - XOffset, Y, Z)
 			local LerpedCFrame = Pet:GetPivot():Lerp(TargetCFrame, 0.1)

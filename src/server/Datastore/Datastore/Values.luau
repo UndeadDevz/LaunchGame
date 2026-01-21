@@ -13,7 +13,6 @@ return {
 			{Name = "Music", Value = 0, ID = 2, Type = "BoolValue"},
 			{Name = "Rebirth", Value = 0, ID = 3, Type = "NumberValue"},
 			{Name = "ShowOtherPets", Value = 0, ID = 4, Type = "BoolValue"},
-			{Name = "BestZone", Value = 0, ID = 5, Type = "IntValue"},
 			{Name = "Currency2", Value = 0, ID = 6, Type = "NumberValue"},
 			
 			--// Statistics
