@@ -33,4 +33,8 @@ function PetMultipliers.RemovePet(PlayerName, PetID)
 	PetMultipliers.Multipliers[PlayerName][PetID] = nil
 end
 
+function PetMultipliers.RemovePlayer(PlayerName)
+	PetMultipliers.Multipliers[PlayerName] = nil
+end
+
 return PetMultipliers

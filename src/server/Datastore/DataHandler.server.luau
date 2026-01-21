@@ -1,3 +1,7 @@
+-- DESACTIVADO: Ahora se usa el sistema de ProfileStore en src/server/Data
+-- Para reactivar, elimina el return de abajo
+return
+
 --// Services
 
 local Players = game:GetService("Players")
