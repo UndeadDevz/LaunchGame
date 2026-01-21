@@ -2,26 +2,25 @@
 
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
-local GameSettings = ReplicatedStorage["Game Settings"]
-
+local GameSettings = require(ReplicatedStorage.Modules.GameSettings)
 local PetMultipliers = require(ReplicatedStorage.Modules.PetMultipliers)
 
 local Multipliers = {}
 
 function Multipliers.RebirthMultiplier(Player)
 	local Multi = 1
-	
-	if GameSettings.RebirthType.Value == "Linear" then
-		Multi *= (Player.Data.PlayerData.Rebirth.Value * GameSettings.RebirthMultiplier.Value + 1) -- so multi = RebirthMulti + 1
+
+	if GameSettings.RebirthType == "Linear" then
+		Multi *= (Player.Data.PlayerData.Rebirth.Value * GameSettings.RebirthMultiplier + 1) -- so multi = RebirthMulti + 1
 	else
-		Multi *= (GameSettings.RebirthMultiplier.Value + 0.5) ^ Player.Data.PlayerData.Rebirth.Value
+		Multi *= (GameSettings.RebirthMultiplier + 0.5) ^ Player.Data.PlayerData.Rebirth.Value
 	end
-	
-	return Multi	
+
+	return Multi
 end
 
 function Multipliers.CurrencyMultiplier(Player)
-	local Multi = GameSettings.CurrencyMultiplier.Value
+	local Multi = GameSettings.CurrencyMultiplier
 	Multi *= (Player.Data.Gamepasses.DoubleCurrency.Value and 2 or 1)
 	Multi *= Multipliers.RebirthMultiplier(Player)
 	Multi *= PetMultipliers.ReadPlayerMultiplier(Player.Name)

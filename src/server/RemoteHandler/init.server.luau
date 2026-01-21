@@ -3,10 +3,10 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local Players = game:GetService("Players")
 
 --// Variables
-local GameSettings = ReplicatedStorage["Game Settings"]
 local Remotes = ReplicatedStorage:WaitForChild("Remotes")
 local Modules = ReplicatedStorage.Modules
 
+local GameSettings = require(Modules.GameSettings)
 local Multipliers = require(Modules.Multipliers)
 local PetMultipliers = require(Modules.PetMultipliers)
 
@@ -46,13 +46,13 @@ end
 
 Remotes.Rebirth.OnServerEvent:Connect(function(Player)
 	if Cooldowns[Player.Name] == false then
-		Cooldowns[Player.Name] = true	
-		if GameSettings.RebirthType.Value == "Linear" then
-			if Player.Data.PlayerData.Currency.Value >= GameSettings.RebirthBasePrice.Value * (Player.Data.PlayerData.Rebirth.Value + 1) then
+		Cooldowns[Player.Name] = true
+		if GameSettings.RebirthType == "Linear" then
+			if Player.Data.PlayerData.Currency.Value >= GameSettings.RebirthBasePrice * (Player.Data.PlayerData.Rebirth.Value + 1) then
 				Rebirth(Player)
 			end
 		else
-			if Player.Data.PlayerData.Currency.Value >= GameSettings.RebirthBasePrice.Value * (GameSettings.RebirthMultiplier.Value + 1.25) ^ Player.Data.PlayerData.Rebirth.Value then
+			if Player.Data.PlayerData.Currency.Value >= GameSettings.RebirthBasePrice * (GameSettings.RebirthMultiplier + 1.25) ^ Player.Data.PlayerData.Rebirth.Value then
 				Rebirth(Player)
 			end
 		end

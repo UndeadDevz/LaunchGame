@@ -43,9 +43,9 @@ if Player.Parent == nil then return end
 local Data = Player.Data
 local PlayerData = Data.PlayerData
 
-local GameSettings = ReplicatedStorage["Game Settings"]
 local Modules = ReplicatedStorage.Modules
 
+local GameSettings = require(Modules.GameSettings)
 local PetMultipliers = require(Modules.PetMultipliers)
 local Multipliers = require(Modules.Multipliers)
 local Utilities = require(Modules.Utilities)
@@ -56,7 +56,7 @@ local Frames = UI.Frames
 local Remotes = ReplicatedStorage.Remotes
 
 --// Overlay
-local CurrencySide = UI[GameSettings.CurrencySide.Value]
+local CurrencySide = UI[GameSettings.CurrencySide]
 CurrencySide.CurrencyLabel.Amount.Text = Utilities.Short.en(PlayerData.Currency.Value)
 PlayerData.Currency.Changed:Connect(function()
 	CurrencySide.CurrencyLabel.Amount.Text = Utilities.Short.en(PlayerData.Currency.Value)
@@ -108,7 +108,7 @@ for _,Frame in Frames:GetChildren() do
 end
 
 --// Buttons
-local ButtonSide = UI[GameSettings.ButtonSide.Value]
+local ButtonSide = UI[GameSettings.ButtonSide]
 for _,Button in ButtonSide.Buttons:GetChildren() do
 	if not Button:IsA("Frame") then continue end
 	Utilities.ButtonAnimations.Create(Button)
@@ -157,16 +157,16 @@ ShowOtherPetsSetting.Toggle.Off.Click.MouseButton1Click:Connect(function()
 end)
 
 --// Rebirth
-local RebirthPrice, RebirthMulti = GameSettings.RebirthBasePrice.Value, GameSettings.RebirthMultiplier.Value
+local RebirthPrice, RebirthMulti = GameSettings.RebirthBasePrice, GameSettings.RebirthMultiplier
 
 function UpdateRebirthInfo()
 	Frames.Rebirth.Counter.Text = "You have "..Utilities.Short.en(PlayerData.Rebirth.Value).." Rebirths"
-	if GameSettings.RebirthType.Value == "Linear" then
-		Frames.Rebirth.Description.Text = "Buying a Rebirth will increase your "..GameSettings.CurrencyName.Value.." Multiplier with x"..RebirthMulti
-		Frames.Rebirth.Cost.Text = "You need atleast "..Utilities.Short.en(RebirthPrice * (PlayerData.Rebirth.Value + 1)).." "..GameSettings.CurrencyName.Value
-	elseif GameSettings.RebirthType.Value == "Exponential" then
-		Frames.Rebirth.Description.Text = "Buying a Rebirth will increase your "..GameSettings.CurrencyName.Value.." Multiplier with ^"..(RebirthMulti+0.5)
-		Frames.Rebirth.Cost.Text = "You need atleast "..Utilities.Short.en(RebirthPrice * ((RebirthMulti+1.25) ^ PlayerData.Rebirth.Value)).." "..GameSettings.CurrencyName.Value
+	if GameSettings.RebirthType == "Linear" then
+		Frames.Rebirth.Description.Text = "Buying a Rebirth will increase your "..GameSettings.CurrencyName.." Multiplier with x"..RebirthMulti
+		Frames.Rebirth.Cost.Text = "You need atleast "..Utilities.Short.en(RebirthPrice * (PlayerData.Rebirth.Value + 1)).." "..GameSettings.CurrencyName
+	elseif GameSettings.RebirthType == "Exponential" then
+		Frames.Rebirth.Description.Text = "Buying a Rebirth will increase your "..GameSettings.CurrencyName.." Multiplier with ^"..(RebirthMulti+0.5)
+		Frames.Rebirth.Cost.Text = "You need atleast "..Utilities.Short.en(RebirthPrice * ((RebirthMulti+1.25) ^ PlayerData.Rebirth.Value)).." "..GameSettings.CurrencyName
 	end
 end
 
@@ -600,7 +600,7 @@ function HatchEgg(Egg: string, Result: string, Offset:number)
 
 	Player.CameraMinZoomDistance = 15
 	Frames.Visible = false
-	UI[GameSettings.ButtonSide.Value].Buttons.Visible = false
+	UI[GameSettings.ButtonSide].Buttons.Visible = false
 
 	local Clone = workspace.Map.Eggs[Egg].EggModel:Clone()
 	Clone:ScaleTo(0.5)
@@ -697,7 +697,7 @@ function HatchEgg(Egg: string, Result: string, Offset:number)
 	NewViewport:Destroy()
 
 	Player.CameraMinZoomDistance = 0.5
-	UI[GameSettings.ButtonSide.Value].Buttons.Visible = true
+	UI[GameSettings.ButtonSide].Buttons.Visible = true
 	Frames.Visible = true	
 end
 
@@ -986,8 +986,8 @@ end)
 
 --// Stats
 local StatsFrame = Frames.Stats
-StatsFrame.TotalCurrency.Description.Text = "Check how much Total "..GameSettings.CurrencyName.Value.." you have!"
-StatsFrame.TotalCurrency.Title.Text = "Total "..GameSettings.CurrencyName.Value
+StatsFrame.TotalCurrency.Description.Text = "Check how much Total "..GameSettings.CurrencyName.." you have!"
+StatsFrame.TotalCurrency.Title.Text = "Total "..GameSettings.CurrencyName
 
 -- Total Currency
 StatsFrame.TotalCurrency.Stat.Amount.Text = Utilities.Short.en(PlayerData.TotalCurrency.Value)
