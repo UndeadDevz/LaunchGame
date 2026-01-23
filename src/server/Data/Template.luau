@@ -8,6 +8,8 @@ return {
 	Rebirth = 0,
 	Music = true,
 	ShowOtherPets = true,
+	SpeedLevel = 1,
+	BestDistance = 0,
 
 	-- Statistics
 	EggsHatched = 0,

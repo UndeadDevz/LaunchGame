@@ -144,4 +144,37 @@ function DataManager.SaveDynamicData(player: Player, profile)
 	end
 end
 
+--[[
+	DataAccessor Functions
+	Wrapper functions for convenient profile data access
+--]]
+
+--- Obtiene la tabla Data del perfil del jugador
+function DataManager.GetData(player: Player): table?
+	local profile = DataManager.Profiles[player]
+	return profile and profile.Data
+end
+
+--- Guarda el perfil del jugador
+function DataManager.SaveData(player: Player)
+	local profile = DataManager.Profiles[player]
+	if profile then
+		profile:Save()
+	end
+end
+
+--- Obtiene el valor de una key especifica de la data
+function DataManager.GetKey(player: Player, key: string): any?
+	local data = DataManager.GetData(player)
+	return data and data[key]
+end
+
+--- Establece el valor de una key especifica en la data
+function DataManager.SetKey(player: Player, key: string, value: any)
+	local data = DataManager.GetData(player)
+	if data then
+		data[key] = value
+	end
+end
+
 return DataManager

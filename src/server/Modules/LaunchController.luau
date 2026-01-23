@@ -1,0 +1,126 @@
+--[[
+	LaunchController Module
+
+	Responsabilidad única: Lanzar al jugador desde el cañón
+	y trackear la distancia durante el vuelo.
+--]]
+
+local RunService = game:GetService("RunService")
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local ServerScriptService = game:GetService("ServerScriptService")
+
+local DataManager = require(ServerScriptService.Data.DataManager)
+
+local LaunchController = {}
+
+-- Estado de sesión (no persistente)
+local launchingPlayers: {[Player]: boolean} = {}
+
+-- Configuración
+local CONFIG = {
+	baseLaunchPower = 500,
+	powerPerLevel = 50,
+	launchPosition = Vector3.new(-35, 15, 0),
+	verticalMultiplier = 0.3,
+	minVelocityThreshold = 5,
+	minHeightThreshold = -100,
+	respawnDelay = 2,
+}
+
+local function getLaunchPower(speedLevel: number): number
+	return CONFIG.baseLaunchPower + (CONFIG.powerPerLevel * (speedLevel - 1))
+end
+
+function LaunchController.IsLaunching(player: Player): boolean
+	return launchingPlayers[player] == true
+end
+
+function LaunchController.Launch(player: Player)
+	print("[LaunchController] Launch called for:", player.Name)
+
+	if launchingPlayers[player] then
+		print("[LaunchController] Player already launching, returning")
+		return
+	end
+
+	local character = player.Character
+	if not character then
+		print("[LaunchController] No character found, returning")
+		return
+	end
+
+	local humanoid = character:FindFirstChildOfClass("Humanoid")
+	local rootPart = character:FindFirstChild("HumanoidRootPart")
+	if not humanoid or not rootPart then
+		print("[LaunchController] No humanoid or rootPart, returning")
+		return
+	end
+
+	print("[LaunchController] All checks passed, launching player")
+	launchingPlayers[player] = true
+
+	-- Obtener nivel de velocidad desde DataManager
+	local speedLevel = DataManager.GetStat(player, "SpeedLevel") or 1
+	local launchPower = getLaunchPower(speedLevel)
+
+	-- Posicionar y lanzar
+	rootPart.CFrame = CFrame.new(CONFIG.launchPosition)
+	rootPart.AssemblyLinearVelocity = Vector3.new(-launchPower, launchPower * CONFIG.verticalMultiplier, 0)
+	print("[LaunchController] Player launched with power:", launchPower)
+
+	-- Trackear distancia
+	local startPos = rootPart.Position.X
+	local lastPos = startPos
+	local bestDistance = DataManager.GetStat(player, "BestDistance") or 0
+
+	local distanceEvent = ReplicatedStorage:FindFirstChild("DistanceUpdateEvent")
+	local connection
+
+	connection = RunService.Heartbeat:Connect(function()
+		if not character or not character.Parent then
+			connection:Disconnect()
+			launchingPlayers[player] = nil
+			return
+		end
+
+		local currentPos = rootPart.Position.X
+		if currentPos < lastPos then
+			local distance = startPos - currentPos
+
+			if distance > bestDistance then
+				bestDistance = distance
+				DataManager.UpdateStat(player, "BestDistance", bestDistance)
+			end
+
+			if distanceEvent then
+				distanceEvent:FireClient(player, distance, true)
+			end
+
+			lastPos = currentPos
+		end
+
+		-- Detectar aterrizaje
+		local hasLanded = rootPart.AssemblyLinearVelocity.Magnitude < CONFIG.minVelocityThreshold
+			or rootPart.Position.Y < CONFIG.minHeightThreshold
+
+		if hasLanded then
+			connection:Disconnect()
+
+			local finalDistance = startPos - lastPos
+			if distanceEvent then
+				distanceEvent:FireClient(player, finalDistance, false)
+			end
+
+			task.wait(CONFIG.respawnDelay)
+			launchingPlayers[player] = nil
+			player:LoadCharacter()
+		end
+	end)
+end
+
+-- Limpiar cuando el jugador se va
+function LaunchController.CleanupPlayer(player: Player)
+	launchingPlayers[player] = nil
+end
+
+return LaunchController
