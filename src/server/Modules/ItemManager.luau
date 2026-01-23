@@ -1,5 +1,11 @@
 --!strict
--- LOCATION: ServerScriptService/Modules/ItemManager
+--[[
+	ItemManager Module
+
+	Sistema de spawn dinámico basado en índice de plataforma.
+	Las plataformas van de Platform_1 a Platform_500.
+	A mayor índice, mayor probabilidad de rarezas altas.
+]]
 
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
@@ -13,24 +19,37 @@ local MutationConfigurations = require(ReplicatedStorage.Modules.MutationConfigu
 local NumberFormatter = require(ReplicatedStorage.Modules.NumberFormatter)
 
 -- [ LAZY DEPENDENCIES ]
-local CarrySystem 
+local CarrySystem
 
 -- [ ASSETS ]
 local ItemsFolder = ReplicatedStorage:WaitForChild("Items")
-local SpawnersFolder = Workspace:WaitForChild("ItemSpawners")
+local PlatformsFolder = Workspace:WaitForChild("LandPlatforms")
 local Templates = ReplicatedStorage:WaitForChild("Templates")
 local InfoGUI_Template = Templates:WaitForChild("InfoGUI")
 
 -- [ CONFIGURATION ]
-local ITEMS_PER_SPAWNER = 6
-local MAX_RETRIES = 50 
+local ITEMS_PER_PLATFORM = 5
+local MAX_RETRIES = 50
 local OVERLAP_PADDING = 1.5
 local MIN_ITEM_RADIUS = 2
-local INCOME_SCALING = 1.125 
+local INCOME_SCALING = 1.125
+local MAX_PLATFORM_INDEX = 500
 
--- ## RECYCLING CONFIG ##
+-- Recycling config
 local RECYCLE_MIN_TIME = 30
 local RECYCLE_MAX_TIME = 90
+
+-- Rarity weights configuration
+-- BaseWeight: peso inicial en Platform_1
+-- ScaleFactor: cómo escala con el índice (negativo = decrece, positivo = crece)
+local RARITY_CONFIG = {
+	{Name = "Common",    BaseWeight = 100, ScaleFactor = -0.15},
+	{Name = "Uncommon",  BaseWeight = 50,  ScaleFactor = 0.05},
+	{Name = "Rare",      BaseWeight = 25,  ScaleFactor = 0.10},
+	{Name = "Epic",      BaseWeight = 10,  ScaleFactor = 0.15},
+	{Name = "Legendary", BaseWeight = 3,   ScaleFactor = 0.20},
+	{Name = "Mythic",    BaseWeight = 1,   ScaleFactor = 0.25},
+}
 
 local MUTATIONS = {
 	{Name = "Neon", Chance = 100},
@@ -49,7 +68,48 @@ local MUTATION_MULTIPLIERS = {
 
 local ItemManager = {}
 
--- [ HELPERS ]
+-- [ HELPER FUNCTIONS ]
+
+-- Extrae el número del nombre de la plataforma (ej: "Platform_150" -> 150)
+local function getPlatformIndex(platformName: string): number
+	local index = tonumber(string.match(platformName, "Platform_(%d+)"))
+	return index or 1
+end
+
+-- Calcula los pesos de rareza basados en el índice de la plataforma
+local function calculateRarityWeights(platformIndex: number): {[string]: number}
+	local weights = {}
+	local normalizedIndex = platformIndex / MAX_PLATFORM_INDEX -- 0 to 1
+
+	for _, rarity in ipairs(RARITY_CONFIG) do
+		-- Fórmula: peso = base * (1 + scaleFactor * normalizedIndex * 10)
+		local weight = rarity.BaseWeight * (1 + rarity.ScaleFactor * normalizedIndex * 10)
+		-- Asegurar peso mínimo para "golpes de suerte"
+		weights[rarity.Name] = math.max(weight, 0.5)
+	end
+
+	return weights
+end
+
+-- Selecciona una rareza basada en pesos
+local function selectRarityByWeight(weights: {[string]: number}): string
+	local totalWeight = 0
+	for _, weight in pairs(weights) do
+		totalWeight += weight
+	end
+
+	local roll = math.random() * totalWeight
+	local cumulative = 0
+
+	for rarityName, weight in pairs(weights) do
+		cumulative += weight
+		if roll <= cumulative then
+			return rarityName
+		end
+	end
+
+	return "Common"
+end
 
 local function getMutation(): string
 	for _, mutation in ipairs(MUTATIONS) do
@@ -73,7 +133,7 @@ local function setupItemGUI(target: Instance, level: number?)
 	if target:IsA("Model") then
 		if not target.PrimaryPart then
 			local found = target:FindFirstChild("Handle") or target:FindFirstChildWhichIsA("BasePart")
-			if found then target.PrimaryPart = found else return end
+			if found then target.PrimaryPart = found :: BasePart else return end
 		end
 		rootPart = target.PrimaryPart
 	elseif target:IsA("Tool") then
@@ -122,16 +182,20 @@ local function setupItemGUI(target: Instance, level: number?)
 	if rarityConfig then
 		lblRarity.Text = rarityConfig.DisplayName
 		lblRarity.TextColor3 = rarityConfig.TextColor
-		local s = lblRarity:FindFirstChild("Stroke") :: UIStroke; if s then s.Color = rarityConfig.StrokeColor; s.Thickness = rarityConfig.StrokeThickness end
-		local g = lblRarity:FindFirstChild("Gradient") :: UIGradient; if g then g.Enabled = (rarityConfig.GradientColor ~= nil); if g.Enabled then g.Color = rarityConfig.GradientColor end end
+		local s = lblRarity:FindFirstChild("Stroke") :: UIStroke
+		if s then s.Color = rarityConfig.StrokeColor; s.Thickness = rarityConfig.StrokeThickness end
+		local g = lblRarity:FindFirstChild("Gradient") :: UIGradient
+		if g then g.Enabled = (rarityConfig.GradientColor ~= nil); if g.Enabled then g.Color = rarityConfig.GradientColor end end
 	end
 
 	local mutationConfig = MutationConfigurations[mutationName]
 	if mutationConfig then
 		lblMutation.Text = mutationConfig.DisplayName
 		lblMutation.TextColor3 = mutationConfig.TextColor
-		local s = lblMutation:FindFirstChild("Stroke") :: UIStroke; if s then s.Color = mutationConfig.StrokeColor; s.Thickness = mutationConfig.StrokeThickness end
-		local g = lblMutation:FindFirstChild("Gradient") :: UIGradient; if g then g.Enabled = (mutationConfig.GradientColor ~= nil); if g.Enabled then g.Color = mutationConfig.GradientColor end end
+		local s = lblMutation:FindFirstChild("Stroke") :: UIStroke
+		if s then s.Color = mutationConfig.StrokeColor; s.Thickness = mutationConfig.StrokeThickness end
+		local g = lblMutation:FindFirstChild("Gradient") :: UIGradient
+		if g then g.Enabled = (mutationConfig.GradientColor ~= nil); if g.Enabled then g.Color = mutationConfig.GradientColor end end
 	end
 
 	infoGui.Adornee = rootPart
@@ -164,9 +228,7 @@ function ItemManager.GiveItemToPlayer(player: Player, itemName: string, mutation
 	newTool:SetAttribute("OriginalName", itemName)
 	newTool:SetAttribute("Mutation", mutation)
 	newTool:SetAttribute("Rarity", rarity)
-	newTool:SetAttribute("Level", actualLevel) 
-
-	-- ## FIX: Prevent Dropping to reduce clutter ##
+	newTool:SetAttribute("Level", actualLevel)
 	newTool.CanBeDropped = false
 
 	local cloneModel = itemTemplate:Clone() :: Model
@@ -174,22 +236,32 @@ function ItemManager.GiveItemToPlayer(player: Player, itemName: string, mutation
 
 	local handle = cloneModel.PrimaryPart or cloneModel:FindFirstChildWhichIsA("BasePart")
 	if not handle then
-		handle = Instance.new("Part"); handle.Size = Vector3.new(1,1,1); handle.Transparency = 1; handle.Parent = cloneModel
+		handle = Instance.new("Part")
+		handle.Size = Vector3.new(1, 1, 1)
+		handle.Transparency = 1
+		handle.Parent = cloneModel
 	end
 	handle.Name = "Handle"
 
 	for _, part in ipairs(cloneModel:GetDescendants()) do
 		if part:IsA("BasePart") then
-			part.Massless = true; part.CanCollide = false; part.Anchored = false
+			part.Massless = true
+			part.CanCollide = false
+			part.Anchored = false
 			if part ~= handle then
-				local weld = Instance.new("WeldConstraint"); weld.Part0 = handle; weld.Part1 = part; weld.Parent = handle
+				local weld = Instance.new("WeldConstraint")
+				weld.Part0 = handle
+				weld.Part1 = part
+				weld.Parent = handle
 			end
 		end
 	end
 
-	for _, child in ipairs(cloneModel:GetChildren()) do child.Parent = newTool end
+	for _, child in ipairs(cloneModel:GetChildren()) do
+		child.Parent = newTool
+	end
 
-	-- [DISCOVERY LOGIC]
+	-- Discovery logic
 	local PlayerController = require(ServerScriptService.Controllers.PlayerController)
 	local profile = PlayerController:GetProfile(player)
 
@@ -212,7 +284,7 @@ function ItemManager.GiveItemToPlayer(player: Player, itemName: string, mutation
 	newTool.Parent = player:WaitForChild("Backpack")
 end
 
--- [ PICKUP LOGIC ] -----------------------------------------------------------
+-- [ PICKUP LOGIC ]
 
 local function onItemPickedUp(player: Player, itemModel: Model)
 	if not CarrySystem then
@@ -220,31 +292,29 @@ local function onItemPickedUp(player: Player, itemModel: Model)
 	end
 
 	if not itemModel or not itemModel.Parent then return end
+
 	local name = itemModel:GetAttribute("OriginalName")
 	local mutation = itemModel:GetAttribute("Mutation")
 	local rarity = itemModel:GetAttribute("Rarity")
-	local level = itemModel:GetAttribute("Level") or 1 
+	local level = itemModel:GetAttribute("Level") or 1
+	local platform = itemModel.Parent :: BasePart
 
 	if name and mutation and rarity then
-
-		if CarrySystem.IsPlayerInZone(player) then
-			-- Player is in the Collection Zone
-			if CarrySystem.CanCarryMore(player) then
-				local success = CarrySystem.AddItemToCarry(player, name, mutation, rarity)
-				if success then
-					itemModel:Destroy() -- Destroy world model, added to virtual inventory
-				end
-			else
-				local Events = ReplicatedStorage:FindFirstChild("Events")
-				local notif = Events and Events:FindFirstChild("ShowNotification")
-				if notif then 
-					notif:FireClient(player, "Carry limit reached!", "Error") 
-				end
+		-- Siempre agregar al carry system cuando se recoge un ítem
+		if CarrySystem.CanCarryMore(player) then
+			local success = CarrySystem.AddItemToCarry(player, name, mutation, rarity)
+			if success then
+				itemModel:Destroy()
+				task.defer(function()
+					ItemManager.SpawnForPlatform(platform)
+				end)
 			end
 		else
-			-- Player is OUTSIDE zone
-			ItemManager.GiveItemToPlayer(player, name, mutation, rarity, level)
-			itemModel:Destroy()
+			local Events = ReplicatedStorage:FindFirstChild("Events")
+			local notif = Events and Events:FindFirstChild("ShowNotification")
+			if notif then
+				notif:FireClient(player, "Carry limit reached!", "Error")
+			end
 		end
 	end
 end
@@ -270,27 +340,28 @@ function ItemManager.SpawnVisualItem(parentPart: BasePart, itemName: string, mut
 
 	for _, part in ipairs(model:GetDescendants()) do
 		if part:IsA("BasePart") then
-			part.Anchored = true; part.CanCollide = false
+			part.Anchored = true
+			part.CanCollide = false
 		end
 	end
 
 	local extents = model:GetExtentsSize()
-	local offset = Vector3.new(0, extents.Y/2, 0)
+	local offset = Vector3.new(0, extents.Y / 2, 0)
 	model:PivotTo(parentPart.CFrame + offset)
 	model.Parent = parentPart
 
 	setupItemGUI(model, level)
 end
 
-function ItemManager.SpawnForPart(spawnerPart: BasePart)
-	local rarityCategory = spawnerPart.Name
-	local possibleItems = ItemConfigurations.GetItemsByRarity(rarityCategory)
-	if #possibleItems == 0 then return end
+function ItemManager.SpawnForPlatform(platform: BasePart)
+	local platformIndex = getPlatformIndex(platform.Name)
+	local rarityWeights = calculateRarityWeights(platformIndex)
 
+	-- Contar items existentes
 	local existingPositions = {}
 	local currentItemCount = 0
 
-	for _, child in ipairs(spawnerPart:GetChildren()) do
+	for _, child in ipairs(platform:GetChildren()) do
 		if child:GetAttribute("IsSpawnedItem") == true and child:IsA("Model") then
 			currentItemCount += 1
 			local origin = child:GetPivot().Position
@@ -298,17 +369,25 @@ function ItemManager.SpawnForPart(spawnerPart: BasePart)
 		end
 	end
 
-	local itemsToSpawn = ITEMS_PER_SPAWNER - currentItemCount
+	local itemsToSpawn = ITEMS_PER_PLATFORM - currentItemCount
 	if itemsToSpawn <= 0 then return end
 
-	local spawnerSize = spawnerPart.Size
-	local spawnerCFrame = spawnerPart.CFrame
+	local platformSize = platform.Size
+	local platformCFrame = platform.CFrame
 
-	for i = 1, itemsToSpawn do
+	for _ = 1, itemsToSpawn do
+		-- Seleccionar rareza basada en pesos de la plataforma
+		local selectedRarity = selectRarityByWeight(rarityWeights)
+		local possibleItems = ItemConfigurations.GetItemsByRarity(selectedRarity)
+
+		if #possibleItems == 0 then continue end
+
 		local randomItemName = possibleItems[math.random(1, #possibleItems)]
 		local mutationName = getMutation()
+
 		local mutationFolder = ItemsFolder:FindFirstChild(mutationName)
 		if not mutationFolder then continue end
+
 		local itemTemplate = mutationFolder:FindFirstChild(randomItemName)
 		if not itemTemplate and mutationName ~= "Normal" then
 			local normalFolder = ItemsFolder:FindFirstChild("Normal")
@@ -316,36 +395,40 @@ function ItemManager.SpawnForPart(spawnerPart: BasePart)
 		end
 		if not itemTemplate then continue end
 
+		-- Calcular dimensiones del item
 		local tempTemplate = itemTemplate:Clone() :: Model
 		local newItemRadius = getItemRadius(tempTemplate)
 		local itemExtents = tempTemplate:GetExtentsSize()
 		local distToBottom = tempTemplate:GetPivot().Position.Y - (tempTemplate:GetBoundingBox().Position.Y - (itemExtents.Y / 2))
 		tempTemplate:Destroy()
 
+		-- Encontrar posición válida
 		local success = false
 		local finalCFrame: CFrame? = nil
 		local attempts = 0
 
 		while not success and attempts < MAX_RETRIES do
 			attempts += 1
-			local xLimit = (spawnerSize.X / 2) - newItemRadius
-			local zLimit = (spawnerSize.Z / 2) - newItemRadius
+
+			local xLimit = (platformSize.X / 2) - newItemRadius - OVERLAP_PADDING
+			local zLimit = (platformSize.Z / 2) - newItemRadius - OVERLAP_PADDING
 			local randX = math.random(-xLimit * 10, xLimit * 10) / 10
 			local randZ = math.random(-zLimit * 10, zLimit * 10) / 10
-			local topSurfaceY = (spawnerSize.Y / 2)
-			local testPos = spawnerCFrame:PointToWorldSpace(Vector3.new(randX, topSurfaceY, randZ))
+			local topSurfaceY = platformSize.Y / 2
+			local testPos = platformCFrame:PointToWorldSpace(Vector3.new(randX, topSurfaceY, randZ))
 
 			local overlapping = false
 			for _, entry in ipairs(existingPositions) do
 				local flatDistance = (Vector3.new(testPos.X, 0, testPos.Z) - Vector3.new(entry.Pos.X, 0, entry.Pos.Z)).Magnitude
 				if flatDistance < (newItemRadius + entry.Radius + OVERLAP_PADDING) then
-					overlapping = true; break
+					overlapping = true
+					break
 				end
 			end
 
 			if not overlapping then
 				local randomRot = CFrame.Angles(0, math.rad(math.random(0, 360)), 0)
-				finalCFrame = CFrame.new(testPos) * spawnerCFrame.Rotation * randomRot
+				finalCFrame = CFrame.new(testPos) * platformCFrame.Rotation * randomRot
 				success = true
 			end
 		end
@@ -355,18 +438,27 @@ function ItemManager.SpawnForPart(spawnerPart: BasePart)
 			newItem.Name = "SpawnedItem"
 			newItem:SetAttribute("IsSpawnedItem", true)
 			newItem:SetAttribute("OriginalName", randomItemName)
-			newItem:SetAttribute("Rarity", rarityCategory)
+			newItem:SetAttribute("Rarity", selectedRarity)
 			newItem:SetAttribute("Mutation", mutationName)
-			newItem:SetAttribute("Level", 1) 
-			newItem.Parent = spawnerPart
+			newItem:SetAttribute("Level", 1)
+			newItem:SetAttribute("PlatformIndex", platformIndex)
+			newItem.Parent = platform
 
 			local pivotAdjustment = Vector3.new(0, distToBottom, 0)
 			newItem:PivotTo(finalCFrame + pivotAdjustment)
+
+			for _, part in ipairs(newItem:GetDescendants()) do
+				if part:IsA("BasePart") then
+					part.Anchored = true
+					part.CanCollide = false
+				end
+			end
 
 			table.insert(existingPositions, {Pos = finalCFrame.Position, Radius = newItemRadius})
 
 			setupItemGUI(newItem, 1)
 
+			-- Sistema de expiración y reciclaje
 			local lifeTime = math.random(RECYCLE_MIN_TIME, RECYCLE_MAX_TIME)
 			local expiresAt = Workspace:GetServerTimeNow() + lifeTime
 			newItem:SetAttribute("ExpiresAt", expiresAt)
@@ -374,16 +466,17 @@ function ItemManager.SpawnForPart(spawnerPart: BasePart)
 			task.delay(lifeTime, function()
 				if newItem and newItem.Parent then
 					newItem:Destroy()
-					ItemManager.SpawnForPart(spawnerPart)
+					ItemManager.SpawnForPlatform(platform)
 				end
 			end)
 
+			-- ProximityPrompt para recoger
 			if newItem.PrimaryPart then
 				local prompt = Instance.new("ProximityPrompt")
 				prompt.ObjectText = randomItemName
 				prompt.ActionText = "Pick Up"
 				prompt.KeyboardKeyCode = Enum.KeyCode.E
-				prompt.RequiresLineOfSight = false 
+				prompt.RequiresLineOfSight = false
 				prompt.HoldDuration = 0
 				prompt.MaxActivationDistance = 8
 				prompt.Style = Enum.ProximityPromptStyle.Custom
@@ -397,15 +490,38 @@ function ItemManager.SpawnForPart(spawnerPart: BasePart)
 	end
 end
 
+-- Alias para compatibilidad
+function ItemManager.SpawnForPart(spawnerPart: BasePart)
+	ItemManager.SpawnForPlatform(spawnerPart)
+end
+
 function ItemManager.SpawnAllItems()
-	for _, spawner in ipairs(SpawnersFolder:GetChildren()) do
-		if spawner:IsA("BasePart") then
-			ItemManager.SpawnForPart(spawner)
+	for _, platform in ipairs(PlatformsFolder:GetChildren()) do
+		if platform:IsA("BasePart") and string.match(platform.Name, "^Platform_%d+$") then
+			ItemManager.SpawnForPlatform(platform)
 		end
 	end
 end
 
-Players.PlayerAdded:Connect(function(player)
+-- Función de utilidad para obtener probabilidades (debug/UI)
+function ItemManager.GetRarityChances(platformIndex: number): {[string]: number}
+	local weights = calculateRarityWeights(platformIndex)
+	local totalWeight = 0
+
+	for _, weight in pairs(weights) do
+		totalWeight += weight
+	end
+
+	local chances = {}
+	for rarityName, weight in pairs(weights) do
+		chances[rarityName] = (weight / totalWeight) * 100
+	end
+
+	return chances
+end
+
+-- Inicializar al cargar
+task.defer(function()
 	ItemManager.SpawnAllItems()
 end)
 

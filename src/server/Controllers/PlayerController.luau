@@ -9,7 +9,7 @@ local MarketplaceService = game:GetService("MarketplaceService")
 local CollectionService = game:GetService("CollectionService")
 
 -- Modules
-local ProfileStoreModule = require(ServerScriptService.Modules.ProfileStore)
+local ProfileStoreModule = require(ServerScriptService.Libraries.ProfileStore)
 local ItemConfigurations = require(ReplicatedStorage.Modules.ItemConfigurations)
 local ProductConfigurations = require(ReplicatedStorage.Modules.ProductConfigurations)
 local NumberFormatter = require(ReplicatedStorage.Modules.NumberFormatter)

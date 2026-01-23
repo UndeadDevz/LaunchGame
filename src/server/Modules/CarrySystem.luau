@@ -1,5 +1,10 @@
 --!strict
--- LOCATION: ServerScriptService/Modules/CarrySystem
+--[[
+	CarrySystem Module
+
+	Gestiona el sistema de recolección de ítems temporales.
+	Se activa exclusivamente por contacto con partes dentro del Folder LandPlatforms.
+]]
 
 local Players = game:GetService("Players")
 local Workspace = game:GetService("Workspace")
@@ -11,11 +16,12 @@ local CarrySystem = {}
 
 -- [ MODULES ]
 local ItemConfigurations = require(ReplicatedStorage.Modules.ItemConfigurations)
-local PlayerController = require(ServerScriptService.Controllers.PlayerController) -- Added for Profile access
+local PlayerController = require(ServerScriptService.Controllers.PlayerController)
 local ItemManager -- Lazy Loaded
 
 -- [ ASSETS ]
-local CollectionZone = Workspace:WaitForChild("CollectionZone")
+local LandPlatforms = Workspace:WaitForChild("LandPlatforms")
+local Destination = Workspace:WaitForChild("Destination") :: BasePart
 local Templates = ReplicatedStorage:WaitForChild("Templates")
 local CarryGUI_Template = Templates:WaitForChild("CarryGUI")
 local Events = ReplicatedStorage:WaitForChild("Events")
@@ -23,20 +29,15 @@ local GlobalSounds = Workspace:WaitForChild("Sounds")
 
 -- [ DATA ]
 local carryingData: {[Player]: {any}} = {}
-local playersInZone: {[Player]: boolean} = {}
+local activeSequence: {[Player]: {
+	startTime: number,
+	thread: thread?,
+}} = {}
 
 -- [ CONFIG ]
-local CHECK_INTERVAL = 0.2 
+local SEQUENCE_DURATION = 5
 
 -- [ HELPERS ]
-
-local function isInsideZone(position: Vector3, zonePart: BasePart): boolean
-	local relativePos = zonePart.CFrame:PointToObjectSpace(position)
-	local size = zonePart.Size
-	return  math.abs(relativePos.X) <= size.X / 2 and
-		math.abs(relativePos.Y) <= size.Y / 2 and
-		math.abs(relativePos.Z) <= size.Z / 2
-end
 
 local function getCarryGUI(player: Player): BillboardGui?
 	if not player.Character then return nil end
@@ -52,17 +53,14 @@ local function updateCarryGUI(player: Player)
 	local items = carryingData[player] or {}
 	local count = #items
 
-	-- ## UPDATED: Get Max Carry from Profile dynamically ##
 	local profile = PlayerController:GetProfile(player)
 	local limit = profile and profile.Data.MaxCarry or 1
 
-	-- 1. Update Count Label
 	local limitLabel = gui:FindFirstChild("CarryLimit") :: TextLabel
 	if limitLabel then
 		limitLabel.Text = tostring(count) .. "/" .. tostring(limit)
 	end
 
-	-- 2. Update Image Grid
 	local imagesFrame = gui:FindFirstChild("ItemImages")
 	if imagesFrame then
 		local folder = imagesFrame:FindFirstChild("Template")
@@ -111,49 +109,25 @@ local function hideCarryGUI(player: Player)
 	end
 end
 
--- [ PUBLIC API ]
+-- [ SEQUENCE LOGIC ]
 
-function CarrySystem.IsPlayerInZone(player: Player): boolean
-	return playersInZone[player] == true
-end
+local function cancelSequence(player: Player)
+	local sequence = activeSequence[player]
+	if not sequence then return end
 
-function CarrySystem.CanCarryMore(player: Player): boolean
-	local current = carryingData[player] or {}
-	local profile = PlayerController:GetProfile(player)
-	local limit = profile and profile.Data.MaxCarry or 1
-	return #current < limit
-end
-
-function CarrySystem.AddItemToCarry(player: Player, name: string, mutation: string, rarity: string)
-	if not carryingData[player] then carryingData[player] = {} end
-
-	if CarrySystem.CanCarryMore(player) then
-		table.insert(carryingData[player], {
-			Name = name,
-			Mutation = mutation,
-			Rarity = rarity
-		})
-		updateCarryGUI(player)
-		return true
+	if sequence.thread then
+		task.cancel(sequence.thread)
 	end
-	return false
-end
+	activeSequence[player] = nil
 
--- [NEW] This function allows other scripts (like upgrades) to force the text to update
-function CarrySystem.RefreshGUI(player: Player)
-	updateCarryGUI(player)
-end
-
--- [ ZONE LOGIC ]
-
-local function processZoneExit(player: Player)
+	-- Entregar ítems si tiene (sin teletransporte)
 	local items = carryingData[player]
-
 	if items and #items > 0 then
+		carryingData[player] = {}
+
 		for _, itemData in ipairs(items) do
 			ItemManager.GiveItemToPlayer(player, itemData.Name, itemData.Mutation, itemData.Rarity, 1)
 		end
-		carryingData[player] = {}
 
 		local successSound = GlobalSounds:FindFirstChild("Success")
 		if successSound and successSound:IsA("Sound") then
@@ -167,10 +141,135 @@ local function processZoneExit(player: Player)
 	hideCarryGUI(player)
 end
 
-local function processZoneEnter(player: Player)
-	if not carryingData[player] then carryingData[player] = {} end
-	showCarryGUI(player)
+local function completeDelivery(player: Player)
+	-- Operación atómica: capturar datos antes de limpiar
+	local items = carryingData[player]
+	local character = player.Character
+
+	if not character then
+		cancelSequence(player)
+		return
+	end
+
+	-- Limpiar datos inmediatamente para evitar duplicados
+	carryingData[player] = {}
+	activeSequence[player] = nil
+
+	-- Teletransportar al jugador
+	local rootPart = character:FindFirstChild("HumanoidRootPart") :: BasePart?
+	if rootPart then
+		local destinationCFrame = Destination.CFrame + Vector3.new(0, 3, 0)
+		rootPart.CFrame = destinationCFrame
+	end
+
+	-- Entregar ítems
+	if items and #items > 0 then
+		for _, itemData in ipairs(items) do
+			ItemManager.GiveItemToPlayer(player, itemData.Name, itemData.Mutation, itemData.Rarity, 1)
+		end
+
+		-- Sonido de éxito
+		local successSound = GlobalSounds:FindFirstChild("Success")
+		if successSound and successSound:IsA("Sound") then
+			local newSound = successSound:Clone()
+			newSound.Parent = player:WaitForChild("PlayerGui")
+			newSound:Play()
+			Debris:AddItem(newSound, newSound.TimeLength + 1)
+		end
+	end
+
+	-- Destruir CarryGUI
+	hideCarryGUI(player)
 end
+
+local function startSequence(player: Player)
+	-- Si ya está en una secuencia activa, no hacer nada (tiempo inamovible)
+	if activeSequence[player] then
+		return
+	end
+
+	local startTime = tick()
+
+	local sequenceThread = task.spawn(function()
+		-- TODO: Actualizar CarryGUI con countdown visual durante los 5 segundos
+		task.wait(SEQUENCE_DURATION)
+
+		-- Verificar que la secuencia no fue cancelada
+		if not activeSequence[player] then
+			return
+		end
+
+		-- Secuencia completada: teletransportar y entregar
+		completeDelivery(player)
+	end)
+
+	activeSequence[player] = {
+		startTime = startTime,
+		thread = sequenceThread,
+	}
+end
+
+local function onPlayerTouchedPlatform(player: Player)
+	startSequence(player)
+end
+
+local function setupPlatformDetection(platform: BasePart)
+	platform.Touched:Connect(function(otherPart: BasePart)
+		local character = otherPart.Parent
+		if not character then return end
+
+		local player = Players:GetPlayerFromCharacter(character)
+		if not player then return end
+
+		onPlayerTouchedPlatform(player)
+	end)
+end
+
+-- [ PUBLIC API ]
+
+function CarrySystem.CanCarryMore(player: Player): boolean
+	local current = carryingData[player] or {}
+	local profile = PlayerController:GetProfile(player)
+	local limit = profile and profile.Data.MaxCarry or 1
+	return #current < limit
+end
+
+function CarrySystem.AddItemToCarry(player: Player, name: string, mutation: string, rarity: string): boolean
+	if not carryingData[player] then
+		carryingData[player] = {}
+	end
+
+	if CarrySystem.CanCarryMore(player) then
+		table.insert(carryingData[player], {
+			Name = name,
+			Mutation = mutation,
+			Rarity = rarity
+		})
+		showCarryGUI(player)
+		updateCarryGUI(player)
+		return true
+	end
+	return false
+end
+
+function CarrySystem.GetCarryingItems(player: Player): {any}
+	return carryingData[player] or {}
+end
+
+function CarrySystem.RefreshGUI(player: Player)
+	updateCarryGUI(player)
+end
+
+function CarrySystem.IsInSequence(player: Player): boolean
+	return activeSequence[player] ~= nil
+end
+
+-- Llamar desde el sensor de salida para cancelar la secuencia si el jugador sale caminando
+function CarrySystem.CancelSequence(player: Player)
+	cancelSequence(player)
+end
+
+-- [ INIT & START ]
 
 function CarrySystem:Init()
 	print("[CarrySystem] Initialized")
@@ -185,12 +284,10 @@ function CarrySystem:Init()
 	end
 
 	dropEvent.OnServerEvent:Connect(function(player)
-		local character = player.Character
-		local rootPart = character and character:FindFirstChild("HumanoidRootPart") :: BasePart
-
-		if rootPart and isInsideZone(rootPart.Position, CollectionZone) then
+		-- Solo permitir drop si no está en secuencia activa
+		if not activeSequence[player] then
 			carryingData[player] = {}
-			updateCarryGUI(player) -- Clears items but updates limit text
+			updateCarryGUI(player)
 			local notif = Events:FindFirstChild("ShowNotification")
 			if notif then notif:FireClient(player, "Items Dropped", "Success") end
 		end
@@ -198,43 +295,40 @@ function CarrySystem:Init()
 end
 
 function CarrySystem:Start()
-	task.spawn(function()
-		while true do
-			task.wait(CHECK_INTERVAL)
+	-- Configurar detección para todas las plataformas existentes
+	for _, platform in ipairs(LandPlatforms:GetChildren()) do
+		if platform:IsA("BasePart") then
+			setupPlatformDetection(platform)
+		end
+	end
 
-			local foundPlayers = {}
-
-			for _, player in ipairs(Players:GetPlayers()) do
-				local character = player.Character
-				if character then
-					local rootPart = character:FindFirstChild("HumanoidRootPart") :: BasePart
-					if rootPart then
-						if isInsideZone(rootPart.Position, CollectionZone) then
-							foundPlayers[player] = true
-						end
-					end
-				end
-			end
-
-			for player, _ in pairs(playersInZone) do
-				if not foundPlayers[player] then
-					playersInZone[player] = nil
-					processZoneExit(player)
-				end
-			end
-
-			for player, _ in pairs(foundPlayers) do
-				if not playersInZone[player] then
-					playersInZone[player] = true
-					processZoneEnter(player)
-				end
-			end
+	-- Escuchar nuevas plataformas añadidas dinámicamente
+	LandPlatforms.ChildAdded:Connect(function(child)
+		if child:IsA("BasePart") then
+			setupPlatformDetection(child)
 		end
 	end)
 
+	-- Sensor de salida: cancela secuencia y entrega ítems si el jugador sale caminando
+	local exitSensor = Workspace:FindFirstChild("ExitSensor") :: BasePart?
+	if exitSensor then
+		exitSensor.Touched:Connect(function(otherPart: BasePart)
+			local character = otherPart.Parent
+			if not character then return end
+
+			local player = Players:GetPlayerFromCharacter(character)
+			if player and activeSequence[player] then
+				cancelSequence(player)
+			end
+		end)
+	else
+		warn("[CarrySystem] ExitSensor not found in Workspace")
+	end
+
+	-- Limpieza cuando un jugador sale
 	Players.PlayerRemoving:Connect(function(player)
+		cancelSequence(player)
 		carryingData[player] = nil
-		playersInZone[player] = nil
 	end)
 end
 

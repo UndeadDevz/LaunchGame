@@ -1,34 +1,22 @@
 --[[
 	Cannon Game Client Script
 
-	Maneja el input del jugador para lanzamiento
-	y muestra la distancia durante el vuelo.
---]]
+	Muestra la distancia durante el vuelo.
+	El lanzamiento se activa automáticamente al estar en LaunchPlatform.
+]]
 
 local Players = game:GetService("Players")
-local UserInputService = game:GetService("UserInputService")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 local player = Players.LocalPlayer
-local playerGui = player:WaitForChild("PlayerGui")
-print("[Client] PlayerGui found")
 
 -- RemoteEvents
-local launchEvent = ReplicatedStorage:WaitForChild("LaunchEvent")
-print("[Client] LaunchEvent found")
 local distanceUpdateEvent = ReplicatedStorage:WaitForChild("DistanceUpdateEvent")
-print("[Client] DistanceUpdateEvent found")
-
--- Referencia al botón existente en GUI
-local gui = playerGui:WaitForChild("GUI")
-print("[Client] GUI found")
-local launchButton = gui:WaitForChild("LaunchButton")
-print("[Client] LaunchButton found:", launchButton:GetFullName())
 
 -- Estado de vuelo
 local isFlying = false
-local flyingDistanceLabel = nil
-local flyingDistanceTextLabel = nil
+local flyingDistanceLabel: BillboardGui
+local flyingDistanceTextLabel: TextLabel
 
 -- Crear label de distancia (billboard sobre el personaje)
 local function createFlyingDistanceLabel()
@@ -66,25 +54,6 @@ local function createFlyingDistanceLabel()
 end
 
 flyingDistanceLabel, flyingDistanceTextLabel = createFlyingDistanceLabel()
-
--- Lanzar
-local function launch()
-	print("[Client] launch() called, firing LaunchEvent")
-	launchEvent:FireServer()
-end
-
--- Conexión del botón
-print("[Client] Connecting LaunchButton:", launchButton:GetFullName())
-launchButton.MouseButton1Click:Connect(launch)
-print("[Client] LaunchButton connected")
-
--- Atajo de teclado (E)
-UserInputService.InputBegan:Connect(function(input, gameProcessed)
-	if gameProcessed then return end
-	if input.KeyCode == Enum.KeyCode.E then
-		launch()
-	end
-end)
 
 -- Actualización de distancia en tiempo real
 distanceUpdateEvent.OnClientEvent:Connect(function(distance, isFlyingUpdate)
