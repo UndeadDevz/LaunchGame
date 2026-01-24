@@ -173,62 +173,104 @@ local PERMANENT_PRODUCT_INFO = {
 }
 
 local function setupPermanentProductsUI()
-	local container = scrolling:FindFirstChild("Upgrades")
-	if not container then return end
 
-	for _, info in ipairs(PERMANENT_PRODUCT_INFO) do
-		local productId = ProductConfigurations.PermanentProducts[info.Key]
-		if not productId or productId == 0 then continue end
+    local containers = {
+        scrolling:FindFirstChild("Upgrades"),
+        scrolling:FindFirstChild("Upgrades1")
+    }
 
-		local itemFrame = container:FindFirstChild(info.Key)
-		if not itemFrame then continue end
+    -- Verificar si los contenedores existen
+    for i, c in ipairs(containers) do
+        if not c then 
+            warn("⚠️ DEBUG: Contenedor " .. (i == 1 and "Upgrades" or "Upgrades1") .. " NO encontrado en scrolling.")
+        else
+            print("📂 DEBUG: Contenedor encontrado:", c.Name)
+        end
+    end
 
-		-- Update name label if exists
-		local nameLabel = itemFrame:FindFirstChild("Name") :: TextLabel
-		if nameLabel then
-			nameLabel.Text = info.DisplayName
-		end
+    for _, info in ipairs(PERMANENT_PRODUCT_INFO) do
 
-		-- Check if already owned
-		local owned = player:GetAttribute(info.Key) == true
+        local productId = ProductConfigurations.PermanentProducts[info.Key]
+        if not productId or productId == 0 then 
+            warn("❌ DEBUG: No hay ProductID configurado para la Key:", info.Key)
+            continue 
+        end
 
-		local buyButton = itemFrame:FindFirstChild("Buy") :: GuiButton
-		local ownedLabel = itemFrame:FindFirstChild("Owned") :: TextLabel
+        -- Buscamos el frame en la ruta: Upgrades/Upgrades1 -> Recive -> Key
+        local itemFrame = nil
+        for _, container in ipairs(containers) do
+            if container then
+                local recive = container:FindFirstChild("Recive")
+                if recive then
+                    itemFrame = recive:FindFirstChild(info.Key)
+                    if itemFrame then 
+                        break 
+                    end
+                else
+                    warn("⚠️ DEBUG: El contenedor", container.Name, "no tiene una carpeta llamada 'Recive'.")
+                end
+            end
+        end
 
-		if owned then
-			if buyButton then buyButton.Visible = false end
-			if ownedLabel then ownedLabel.Visible = true end
-		else
-			if ownedLabel then ownedLabel.Visible = false end
-			if buyButton then
-				buyButton.Visible = true
-				buyButton.MouseButton1Click:Connect(function()
-					MarketplaceService:PromptProductPurchase(player, productId)
-				end)
+        if not itemFrame then 
+            warn("🛑 DEBUG: No se pudo localizar el frame para '" .. info.Key .. "' en ninguno de los contenedores.")
+            continue 
+        end
 
-				-- Fetch price
-				task.spawn(function()
-					local priceText = findTextLabel(buyButton)
-					if priceText then
-						local success, productInfo = pcall(function()
-							return MarketplaceService:GetProductInfo(productId, Enum.InfoType.Product)
-						end)
-						priceText.Text = if success and productInfo then "" .. tostring(productInfo.PriceInRobux) else "N/A"
-					end
-				end)
-			end
-		end
+        -- Referencias a la UI
+        local nameLabel = itemFrame:FindFirstChild("Name") :: TextLabel
+        local buyButton = itemFrame:FindFirstChild("Buy") :: TextButton
+        local ownedLabel = itemFrame:FindFirstChild("Owned") :: TextLabel
 
-		-- Listen for attribute change (when purchased)
-		player:GetAttributeChangedSignal(info.Key):Connect(function()
-			if player:GetAttribute(info.Key) == true then
-				if buyButton then buyButton.Visible = false end
-				if ownedLabel then ownedLabel.Visible = true end
-			end
-		end)
-	end
+        if nameLabel then
+            nameLabel.Text = info.DisplayName
+        else
+            print("📝 DEBUG: (Opcional) No se encontró el Label 'Name' en", info.Key)
+        end
+
+        -- Función para refrescar el estado Visual
+        local function updateVisualState()
+            local isOwned = player:GetAttribute(info.Key) == true
+            if buyButton then buyButton.Visible = not isOwned end
+            if ownedLabel then ownedLabel.Visible = isOwned end
+        end
+
+        -- Configuración inicial
+        updateVisualState()
+
+        -- Lógica de Compra
+        if buyButton then
+            if not (player:GetAttribute(info.Key) == true) then
+                buyButton.MouseButton1Click:Connect(function()
+                    MarketplaceService:PromptProductPurchase(player, productId)
+                end)
+
+                -- Obtener Precio
+                task.spawn(function()
+                    local priceText = findTextLabel(buyButton)
+                    if priceText then
+                        local success, productInfo = pcall(function()
+                            return MarketplaceService:GetProductInfo(productId, Enum.InfoType.Product)
+                        end)
+                        if success and productInfo then
+                            priceText.Text = "" .. tostring(productInfo.PriceInRobux)
+                        else
+                            warn("❌ DEBUG: Error al obtener info del producto", productId)
+                            priceText.Text = "N/A"
+                        end
+                    end
+                end)
+            end
+        else
+            warn("⚠️ DEBUG: El item", info.Key, "no tiene un botón llamado 'Buy'.")
+        end
+
+        -- Escuchar cambios en los atributos
+        player:GetAttributeChangedSignal(info.Key):Connect(function()
+            updateVisualState()
+        end)
+    end
 end
-
 -- [ INIT ]
 task.spawn(function() setupPackUI("StarterPack", "StarterPack") end)
 task.spawn(function() setupPackUI("ProPack", "ProPack") end)
