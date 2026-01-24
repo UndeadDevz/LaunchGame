@@ -20,7 +20,6 @@ return {
 		},
 		
 		["Gamepasses"] = {
-			{Name = "DoubleCurrency", Value = false, ID = 1, Type = "BoolValue"},
 			{Name = "MoreStorage1", Value = false, ID = 2, Type = "BoolValue"}, -- dont worry about this if u have the gamepasses disabled, as it will do nothing :)
 			{Name = "MoreStorage2", Value = false, ID = 3, Type = "BoolValue"},
 			{Name = "MorePets1", Value = false, ID = 4, Type = "BoolValue"},
