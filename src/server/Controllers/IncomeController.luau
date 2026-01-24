@@ -8,11 +8,12 @@ local Workspace = game:GetService("Workspace")
 local IncomeController = {}
 
 local ItemConfigurations = require(ReplicatedStorage.Modules.ItemConfigurations)
+local PetMultipliers = require(ReplicatedStorage.Modules.PetMultipliers)
 local PlayerController -- Lazy load
 
 local CYCLE_RATE = 1.0
-local INCOME_SCALING = 1.125 
-local VIP_MULTIPLIER = 1.25 -- ## ADDED ##
+local INCOME_SCALING = 1.125
+local VIP_MULTIPLIER = 1.25
 
 local MUTATION_MULTIPLIERS = {
 	["Normal"] = 1,
@@ -54,9 +55,9 @@ function IncomeController:Start()
 
 									local reb = profile.Data.Rebirths or 0
 									local rebMult = 1 + (reb * 0.5)
+									local petMult = PetMultipliers.ReadPlayerMultiplier(player.Name)
 
-									-- ## APPLIED VIP MULT HERE ##
-									local income = base * mutMult * levelMult * rebMult * vipMult
+									local income = base * mutMult * levelMult * rebMult * vipMult * petMult
 
 									slotData.Stored += income
 
