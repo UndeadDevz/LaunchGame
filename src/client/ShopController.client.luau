@@ -162,10 +162,78 @@ local function setupCashOnlyUI()
 	end
 end
 
+-- [ LOGIC: PERMANENT PRODUCTS (One-time purchases) ]
+local PERMANENT_PRODUCT_INFO = {
+	{ Key = "MoreStorage1", DisplayName = "+50 Pet Storage" },
+	{ Key = "MoreStorage2", DisplayName = "+250 Pet Storage" },
+	{ Key = "MorePets1", DisplayName = "+3 Pets Equipped" },
+	{ Key = "TripleEgg", DisplayName = "Triple Egg Hatch" },
+	{ Key = "Lucky", DisplayName = "2x Luck" },
+	{ Key = "AutoEgg", DisplayName = "Auto Egg Hatch" },
+}
+
+local function setupPermanentProductsUI()
+	local container = scrolling:FindFirstChild("Upgrades")
+	if not container then return end
+
+	for _, info in ipairs(PERMANENT_PRODUCT_INFO) do
+		local productId = ProductConfigurations.PermanentProducts[info.Key]
+		if not productId or productId == 0 then continue end
+
+		local itemFrame = container:FindFirstChild(info.Key)
+		if not itemFrame then continue end
+
+		-- Update name label if exists
+		local nameLabel = itemFrame:FindFirstChild("Name") :: TextLabel
+		if nameLabel then
+			nameLabel.Text = info.DisplayName
+		end
+
+		-- Check if already owned
+		local owned = player:GetAttribute(info.Key) == true
+
+		local buyButton = itemFrame:FindFirstChild("Buy") :: GuiButton
+		local ownedLabel = itemFrame:FindFirstChild("Owned") :: TextLabel
+
+		if owned then
+			if buyButton then buyButton.Visible = false end
+			if ownedLabel then ownedLabel.Visible = true end
+		else
+			if ownedLabel then ownedLabel.Visible = false end
+			if buyButton then
+				buyButton.Visible = true
+				buyButton.MouseButton1Click:Connect(function()
+					MarketplaceService:PromptProductPurchase(player, productId)
+				end)
+
+				-- Fetch price
+				task.spawn(function()
+					local priceText = findTextLabel(buyButton)
+					if priceText then
+						local success, productInfo = pcall(function()
+							return MarketplaceService:GetProductInfo(productId, Enum.InfoType.Product)
+						end)
+						priceText.Text = if success and productInfo then "" .. tostring(productInfo.PriceInRobux) else "N/A"
+					end
+				end)
+			end
+		end
+
+		-- Listen for attribute change (when purchased)
+		player:GetAttributeChangedSignal(info.Key):Connect(function()
+			if player:GetAttribute(info.Key) == true then
+				if buyButton then buyButton.Visible = false end
+				if ownedLabel then ownedLabel.Visible = true end
+			end
+		end)
+	end
+end
+
 -- [ INIT ]
 task.spawn(function() setupPackUI("StarterPack", "StarterPack") end)
 task.spawn(function() setupPackUI("ProPack", "ProPack") end)
 task.spawn(setupItemsOnlyUI)
-task.spawn(setupCashOnlyUI) -- ## ADDED ##
+task.spawn(setupCashOnlyUI)
+task.spawn(setupPermanentProductsUI)
 
 print("[ShopController] Loaded")
