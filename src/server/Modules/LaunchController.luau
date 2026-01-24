@@ -10,6 +10,7 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local ServerScriptService = game:GetService("ServerScriptService")
 
 local DataManager = require(ServerScriptService.Data.DataManager)
+local ForceSystem -- Lazy loaded
 
 local Players = game:GetService("Players")
 
@@ -21,16 +22,16 @@ local initialized = false
 
 -- Configuración
 local CONFIG = {
-	baseLaunchPower = 500,
-	powerPerLevel = 50,
+	baseLaunchPower = 300,
+	powerPerForce = 25,
 	launchPosition = Vector3.new(-35, 15, 0),
 	verticalMultiplier = 0.3,
 	minVelocityThreshold = 5,
 	minHeightThreshold = -100,
 }
 
-local function getLaunchPower(speedLevel: number): number
-	return CONFIG.baseLaunchPower + (CONFIG.powerPerLevel * (speedLevel - 1))
+local function getLaunchPower(force: number): number
+	return CONFIG.baseLaunchPower + (CONFIG.powerPerForce * (force - 1))
 end
 
 function LaunchController.IsLaunching(player: Player): boolean
@@ -61,9 +62,9 @@ function LaunchController.Launch(player: Player)
 	print("[LaunchController] All checks passed, launching player")
 	launchingPlayers[player] = true
 
-	-- Obtener nivel de velocidad desde DataManager
-	local speedLevel = DataManager.GetStat(player, "SpeedLevel") or 1
-	local launchPower = getLaunchPower(speedLevel)
+	-- Obtener Force del jugador
+	local force = ForceSystem and ForceSystem.GetForce(player) or 1
+	local launchPower = getLaunchPower(force)
 
 	-- Posicionar y lanzar
 	rootPart.CFrame = CFrame.new(CONFIG.launchPosition)
@@ -126,6 +127,9 @@ end
 function LaunchController:Init()
 	if initialized then return end
 	initialized = true
+
+	-- Cargar ForceSystem
+	ForceSystem = require(ServerScriptService.Modules.ForceSystem)
 
 	-- Crear RemoteEvents
 	local function createEvent(name: string): RemoteEvent

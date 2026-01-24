@@ -131,6 +131,7 @@ function UIInitializer:Init()
 	setupHudButtons()
 	setupTouchTrigger("Carry", "Carry")
 	setupTouchTrigger("Speed", "Speed")
+	setupTouchTrigger("Force", "Force")
 
 	print("[UIInitializer] Ready.")
 end

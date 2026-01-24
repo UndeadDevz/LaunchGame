@@ -52,8 +52,9 @@ type PlayerData = {
 -- [ DATA TEMPLATE ]
 local Template: PlayerData = {
 	Money = 0,
-	Speed = 10,      
-	MaxCarry = 1,    
+	Speed = 10,
+	Force = 1,
+	MaxCarry = 1,
 	Rebirths = 0,
 	BaseLevel = 0,
 	LastSaveTime = 0,
@@ -314,10 +315,12 @@ local function createLeaderstats(player: Player, data: PlayerData)
 	local ls = Instance.new("Folder"); ls.Name = "leaderstats"; ls.Parent = player
 	local m = Instance.new("IntValue"); m.Name = "Money"; m.Value = data.Money; m.Parent = ls
 	local s = Instance.new("IntValue"); s.Name = "Speed"; s.Value = data.Speed; s.Parent = ls
+	local f = Instance.new("IntValue"); f.Name = "Force"; f.Value = data.Force or 1; f.Parent = ls
 	local r = Instance.new("IntValue"); r.Name = "Rebirths"; r.Value = data.Rebirths; r.Parent = ls
 
 	m.Changed:Connect(function(v) data.Money = v end)
 	s.Changed:Connect(function(v) data.Speed = v end)
+	f.Changed:Connect(function(v) data.Force = v end)
 	r.Changed:Connect(function(v) data.Rebirths = v end)
 end
 
