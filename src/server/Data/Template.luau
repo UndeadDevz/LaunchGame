@@ -16,7 +16,6 @@ return {
 
 	-- Gamepasses (se verifican con MarketplaceService pero se cachean aqui)
 	Gamepasses = {
-		DoubleCurrency = false,
 		MoreStorage1 = false,
 		MoreStorage2 = false,
 		MorePets1 = false,
