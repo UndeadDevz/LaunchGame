@@ -11,10 +11,13 @@ local ServerScriptService = game:GetService("ServerScriptService")
 
 local DataManager = require(ServerScriptService.Data.DataManager)
 
+local Players = game:GetService("Players")
+
 local LaunchController = {}
 
 -- Estado de sesión (no persistente)
 local launchingPlayers: {[Player]: boolean} = {}
+local initialized = false
 
 -- Configuración
 local CONFIG = {
@@ -121,6 +124,37 @@ end
 -- Limpiar cuando el jugador se va
 function LaunchController.CleanupPlayer(player: Player)
 	launchingPlayers[player] = nil
+end
+
+function LaunchController:Init()
+	if initialized then return end
+	initialized = true
+
+	-- Crear RemoteEvents
+	local function createEvent(name: string): RemoteEvent
+		local existing = ReplicatedStorage:FindFirstChild(name)
+		if existing then return existing :: RemoteEvent end
+
+		local event = Instance.new("RemoteEvent")
+		event.Name = name
+		event.Parent = ReplicatedStorage
+		return event
+	end
+
+	local launchEvent = createEvent("LaunchEvent")
+	createEvent("DistanceUpdateEvent")
+
+	-- Conectar evento de lanzamiento
+	launchEvent.OnServerEvent:Connect(function(player)
+		LaunchController.Launch(player)
+	end)
+
+	-- Limpieza cuando el jugador sale
+	Players.PlayerRemoving:Connect(function(player)
+		LaunchController.CleanupPlayer(player)
+	end)
+
+	print("[LaunchController] Initialized")
 end
 
 return LaunchController

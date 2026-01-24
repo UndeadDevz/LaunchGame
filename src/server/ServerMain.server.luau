@@ -7,6 +7,16 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local Modules = ServerScriptService.Modules
 local Controllers = ServerScriptService.Controllers
 
+-- Configurar Pets: CanCollide = false
+local Pets = ReplicatedStorage:FindFirstChild("Pets")
+if Pets then
+	for _, part in Pets:GetDescendants() do
+		if part:IsA("BasePart") then
+			part.CanCollide = false
+		end
+	end
+end
+
 -- 1. LOAD PLAYER CONTROLLER FIRST
 local PlayerController = require(Controllers.PlayerController)
 
