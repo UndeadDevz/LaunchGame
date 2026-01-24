@@ -61,7 +61,15 @@ local Template: PlayerData = {
 	Inventory = {},
 	Plots = { Floor1 = {}, Floor2 = {}, Floor3 = {} },
 	DiscoveredItems = {},
-	ClaimedPacks = {}
+	ClaimedPacks = {},
+	Gamepasses = {
+		MoreStorage1 = false,
+		MoreStorage2 = false,
+		MorePets1 = false,
+		TripleEgg = false,
+		Lucky = false,
+		AutoEgg = false,
+	}
 }
 
 local GameProfileStore = ProfileStoreModule.New(DATA_VERSION, Template)
@@ -219,6 +227,15 @@ function PlayerController:AddMoney(player: Player, amount: number)
 	end
 end
 
+function PlayerController:SetGamepass(player: Player, gamepassName: string, value: boolean)
+	local profile = profiles[player]
+	if profile then
+		if not profile.Data.Gamepasses then profile.Data.Gamepasses = {} end
+		profile.Data.Gamepasses[gamepassName] = value
+		player:SetAttribute(gamepassName, value)
+	end
+end
+
 function PlayerController:IncrementBaseLevel(player: Player)
 	local profile = profiles[player]
 	if profile then profile.Data.BaseLevel += 1; return profile.Data.BaseLevel end
@@ -311,6 +328,13 @@ local function loadInventory(player: Player, profile: any)
 	end
 end
 
+local function syncGamepassAttributes(player: Player, gamepasses: {[string]: boolean}?)
+	if not gamepasses then return end
+	for name, owned in pairs(gamepasses) do
+		player:SetAttribute(name, owned)
+	end
+end
+
 local function createLeaderstats(player: Player, data: PlayerData)
 	local ls = Instance.new("Folder"); ls.Name = "leaderstats"; ls.Parent = player
 	local m = Instance.new("IntValue"); m.Name = "Money"; m.Value = data.Money; m.Parent = ls
@@ -355,6 +379,7 @@ local function onPlayerAdded(player: Player)
 	if player.Parent == Players then
 		profiles[player] = profile
 		createLeaderstats(player, profile.Data)
+		syncGamepassAttributes(player, profile.Data.Gamepasses)
 
 		-- ## INVENTORY TRACKING SETUP ##
 		local function setupBackpackTracking(backpack: Backpack)

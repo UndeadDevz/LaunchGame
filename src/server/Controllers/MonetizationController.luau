@@ -88,6 +88,16 @@ function MonetizationController.ProcessReceipt(receiptInfo)
 		return Enum.ProductPurchaseDecision.PurchaseGranted
 	end
 
+	-- 7. PERMANENT PRODUCTS (Developer Products que funcionan como Gamepasses)
+	local permanentName = ProductConfigurations.GetPermanentProductById(productId)
+	if permanentName then
+		if not PlayerController then PlayerController = require(ServerScriptService.Controllers.PlayerController) end
+		PlayerController:SetGamepass(player, permanentName, true)
+
+		if notif then notif:FireClient(player, permanentName .. " Purchased!", "Success") end
+		return Enum.ProductPurchaseDecision.PurchaseGranted
+	end
+
 	return Enum.ProductPurchaseDecision.NotProcessedYet
 end
 

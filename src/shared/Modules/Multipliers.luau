@@ -1,16 +1,27 @@
--- In this module you can find things like Rebirth Multiplier. By using code such as Multipliers.RebirthMultiplier(Player) returns a number which is that player's multiplier. Useful if you have multipliers in multiple scripts
+-- Multipliers module - reads gamepass data from Player attributes
 local Multipliers = {}
 
 function Multipliers.GetMaxPetsEquipped(Player)
-	return 5 + (Player.Data.Gamepasses["MorePets1"].Value and 3 or 0)
+	return 5 + (Player:GetAttribute("MorePets1") and 3 or 0)
 end
 
 function Multipliers.GetMaxPetsStorage(Player)
-	return 50 + (Player.Data.Gamepasses["MoreStorage1"].Value and 50 or 0) + (Player.Data.Gamepasses["MoreStorage2"].Value and 250 or 0)
+	local base = 50
+	local storage1 = Player:GetAttribute("MoreStorage1") and 50 or 0
+	local storage2 = Player:GetAttribute("MoreStorage2") and 250 or 0
+	return base + storage1 + storage2
 end
 
 function Multipliers.GetLuckMultiplier(Player)
-	return 1 * (Player.Data.Gamepasses.Lucky.Value and 2 or 1)
+	return Player:GetAttribute("Lucky") and 2 or 1
+end
+
+function Multipliers.HasTripleEgg(Player)
+	return Player:GetAttribute("TripleEgg") == true
+end
+
+function Multipliers.HasAutoEgg(Player)
+	return Player:GetAttribute("AutoEgg") == true
 end
 
 return Multipliers

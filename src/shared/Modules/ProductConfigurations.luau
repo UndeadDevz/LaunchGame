@@ -33,6 +33,23 @@ ProductConfigurations.GamePasses = {
 	["ProPack"] = 1663452898,
 }
 
+-- Permanent Products (funcionan como gamepasses pero son developer products)
+ProductConfigurations.PermanentProducts = {
+	["MoreStorage1"] = 0, -- TODO: Reemplazar con ID real
+	["MoreStorage2"] = 0, -- TODO: Reemplazar con ID real
+	["MorePets1"] = 0, -- TODO: Reemplazar con ID real
+	["TripleEgg"] = 0, -- TODO: Reemplazar con ID real
+	["Lucky"] = 0, -- TODO: Reemplazar con ID real
+	["AutoEgg"] = 0, -- TODO: Reemplazar con ID real
+}
+
+function ProductConfigurations.GetPermanentProductById(id: number)
+	for name, productId in pairs(ProductConfigurations.PermanentProducts) do
+		if productId == id then return name end
+	end
+	return nil
+end
+
 ProductConfigurations.CarryUpgradeMap = {
 	["CarryUpgrade_Lvl2"] = 2,
 	["CarryUpgrade_Lvl3"] = 3,
