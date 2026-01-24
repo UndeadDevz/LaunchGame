@@ -13,15 +13,10 @@ return {
 			{Name = "Music", Value = 0, ID = 2, Type = "BoolValue"},
 			{Name = "Rebirth", Value = 0, ID = 3, Type = "NumberValue"},
 			{Name = "ShowOtherPets", Value = 0, ID = 4, Type = "BoolValue"},
-			{Name = "Currency2", Value = 0, ID = 6, Type = "NumberValue"},
-			
+
 			--// Statistics
 			{Name = "EggsHatched", Value = 0, ID = 9, Type = "IntValue"},
 			{Name = "TotalCurrency", Value = 0, ID = 10, Type = "IntValue"},
-
-			--// Gem Upgrades
-			{Name = "GemUpgrade1", Value = 0, ID = 7, Type = "IntValue"},
-			{Name = "GemUpgrade2", Value = 0, ID = 8, Type = "IntValue"},
 		},
 		
 		["Gamepasses"] = {

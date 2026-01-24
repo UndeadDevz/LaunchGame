@@ -65,13 +65,6 @@ MoneyStat.Changed:Connect(function()
 	CurrencySide.CurrencyLabel.Amount.Text = Utilities.Short.en(MoneyStat.Value)
 end)
 
--- Currency2 (Gems) - mantener sistema antiguo si existe
-if PlayerData:FindFirstChild("Currency2") then
-	CurrencySide.CurrencyLabel2.Amount.Text = Utilities.Short.en(PlayerData.Currency2.Value)
-	PlayerData.Currency2.Changed:Connect(function()
-		CurrencySide.CurrencyLabel2.Amount.Text = Utilities.Short.en(PlayerData.Currency2.Value)
-	end)
-end
 
 --// Popups
 local CurrencyOld = MoneyStat.Value
@@ -892,81 +885,6 @@ function PetMovement()
 			Pet:PivotTo(LerpedCFrame)
 		end
 	end
-end
-
---// Gem Shop
-local Gemshop = ReplicatedStorage.GemShop
-local Defaultwalkspeed = Player.Character.Humanoid.WalkSpeed
-
-local function GemRing()
-	while task.wait(0.1) do
-		if (Player.Character.HumanoidRootPart.Position - workspace.Map.Rings.GemShop.MainPart.Position).Magnitude < 10 then
-			if not Frames.GemShop.Visible then
-				Utilities.ButtonHandler.OnClick(Frames.GemShop, UDim2.new(0.359,0,0.414,0))
-			end
-		end
-
-		if Player.Character then
-			local Walkspeed = Defaultwalkspeed + Gemshop["1"].Reward.DefaultReward.Value + Gemshop["1"].Reward.IncreasePer.Value * (PlayerData.GemUpgrade1.Value+1)
-			Player.Character.Humanoid.WalkSpeed = Walkspeed
-		end
-	end
-end
-
-coroutine.wrap(GemRing)()
-
-local GemUpgradeTemplate = Frames.GemShop.Upgrades.Template
-GemUpgradeTemplate.Parent = script
-GemUpgradeTemplate.Name = "GemUpgradeTemplate" -- this moves the template from the ui to the script (easier for people to edit :) 
-
-for _,v in Gemshop:GetChildren() do
-	local i = v.Name
-	local NewUpgrade = GemUpgradeTemplate:Clone()
-	NewUpgrade.LayoutOrder = tonumber(i)
-	NewUpgrade.Name = i
-	NewUpgrade.Title.Text = v.UpgradeName.Value
-
-	local function CalcReward(Reward)
-		local R = v.Reward
-
-		if R.Exponential.Value then
-			return R.DefaultReward.Value + R.IncreasePer.Value ^ Reward
-		else
-			return R.DefaultReward.Value + R.IncreasePer.Value * Reward
-		end
-	end
-
-	local function CalcCost()
-		local C = v.Price
-
-		if C.Exponential.Value then
-			return C.DefaultPrice.Value * C.IncreasePer.Value ^ PlayerData["GemUpgrade"..i].Value
-		else
-			return C.DefaultPrice.Value + C.IncreasePer.Value * (PlayerData["GemUpgrade"..i].Value+1)
-		end
-	end
-
-	local function Update()
-		local O = v.Operator.Value
-		local CurrentLevel = PlayerData["GemUpgrade"..i].Value
-
-		if CurrentLevel < v.Max.Value then
-			NewUpgrade.Description.Text = O..Utilities.Short.en(CalcReward(CurrentLevel)).." > "..O..Utilities.Short.en(CalcReward(CurrentLevel+1))
-			NewUpgrade.Buy.Amount.Text = Utilities.Short.en(CalcCost())
-		else
-			NewUpgrade.Description.Text = O..Utilities.Short.en(CalcReward(CurrentLevel)).." > Max"
-			NewUpgrade.Buy.Amount.Text = "Max"
-		end
-	end
-
-	Update()
-	PlayerData["GemUpgrade"..i].Changed:Connect(Update)
-
-	NewUpgrade.Parent = Frames.GemShop.Upgrades
-
-	NewUpgrade.Buy.Click.MouseButton1Click:Connect(function()
-		Remotes.GemUpgrade:FireServer(i)
-	end)
 end
 
 --// Codes

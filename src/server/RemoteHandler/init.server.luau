@@ -227,27 +227,3 @@ Remotes.AutoDelete.OnServerInvoke = function(Player, Pet)
 	Player.Data.AutoDelete[Pet].Value = not Player.Data.AutoDelete[Pet].Value
 	return Player.Data.AutoDelete[Pet].Value
 end
-
---// Gemshop
-Remotes.GemUpgrade.OnServerEvent:Connect(function(Player, Upgrade)
-	if not ReplicatedStorage.GemShop:FindFirstChild(Upgrade) then return end
-
-	local GemUpg = ReplicatedStorage.GemShop[Upgrade]
-	local UpgradeTier = Player.Data.PlayerData["GemUpgrade"..Upgrade]
-
-	if UpgradeTier.Value >= GemUpg.Max.Value then return end -- max
-
-	local Cost = GemUpg.Price
-	local Price
-
-	if Cost.Exponential.Value then
-		Price = Cost.DefaultPrice.Value * Cost.IncreasePer.Value ^ UpgradeTier.Value
-	else
-		Price = Cost.DefaultPrice.Value + Cost.IncreasePer.Value * (UpgradeTier.Value+1)
-	end
-
-	if Player.Data.PlayerData.Currency2.Value >= Price then
-		Player.Data.PlayerData.Currency2.Value -= Price
-		UpgradeTier.Value += 1
-	end
-end)

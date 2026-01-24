@@ -5,8 +5,8 @@ DataManager.Profiles = {}
 
 -- Lista de valores de PlayerData que se sincronizan automaticamente
 local PlayerDataValues = {
-	"Currency", "Currency2", "Rebirth", "Music",
-	"ShowOtherPets", "EggsHatched", "TotalCurrency", "GemUpgrade1", "GemUpgrade2"
+	"Currency", "Rebirth", "Music",
+	"ShowOtherPets", "EggsHatched", "TotalCurrency"
 }
 
 --- Obtiene el valor de una estadistica especifica del perfil

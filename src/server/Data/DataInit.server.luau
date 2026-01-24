@@ -45,14 +45,11 @@ local function Initialize(player: Player, profile)
 	end
 
 	CreateValue("NumberValue", "Currency", Data.Currency, PlayerDataFolder)
-	CreateValue("NumberValue", "Currency2", Data.Currency2, PlayerDataFolder)
 	CreateValue("IntValue", "Rebirth", Data.Rebirth, PlayerDataFolder)
 	CreateValue("BoolValue", "Music", Data.Music, PlayerDataFolder)
 	CreateValue("BoolValue", "ShowOtherPets", Data.ShowOtherPets, PlayerDataFolder)
 	CreateValue("IntValue", "EggsHatched", Data.EggsHatched, PlayerDataFolder)
 	CreateValue("IntValue", "TotalCurrency", Data.TotalCurrency, PlayerDataFolder)
-	CreateValue("IntValue", "GemUpgrade1", Data.GemUpgrade1, PlayerDataFolder)
-	CreateValue("IntValue", "GemUpgrade2", Data.GemUpgrade2, PlayerDataFolder)
 
 	-- Carpeta Gamepasses
 	local GamepassesFolder = Instance.new("Folder")

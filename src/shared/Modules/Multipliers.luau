@@ -24,14 +24,7 @@ function Multipliers.CurrencyMultiplier(Player)
 	Multi *= (Player.Data.Gamepasses.DoubleCurrency.Value and 2 or 1)
 	Multi *= Multipliers.RebirthMultiplier(Player)
 	Multi *= PetMultipliers.ReadPlayerMultiplier(Player.Name)
-	
-	local R = ReplicatedStorage.GemShop["2"].Reward
-	if R.Exponential.Value then
-		Multi *= R.DefaultReward.Value + R.IncreasePer.Value ^ Player.Data.PlayerData.GemUpgrade2.Value
-	else
-		Multi *= R.DefaultReward.Value + R.IncreasePer.Value * Player.Data.PlayerData.GemUpgrade2.Value
-	end
-	
+
 	return Multi
 end
 

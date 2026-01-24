@@ -4,7 +4,6 @@
 return {
 	-- PlayerData
 	Currency = 200,
-	Currency2 = 0, -- Gems
 	Rebirth = 0,
 	Music = true,
 	ShowOtherPets = true,
@@ -14,10 +13,6 @@ return {
 	-- Statistics
 	EggsHatched = 0,
 	TotalCurrency = 0,
-
-	-- Gem Upgrades
-	GemUpgrade1 = 0,
-	GemUpgrade2 = 0,
 
 	-- Gamepasses (se verifican con MarketplaceService pero se cachean aqui)
 	Gamepasses = {
