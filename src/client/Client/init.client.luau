@@ -49,6 +49,7 @@ local GameSettings = require(Modules.GameSettings)
 local PetMultipliers = require(Modules.PetMultipliers)
 local Multipliers = require(Modules.Multipliers)
 local Utilities = require(Modules.Utilities)
+local ProductConfigurations = require(Modules.ProductConfigurations)
 
 local UI = Player.PlayerGui:WaitForChild("GameUI")
 local Frames = UI.Frames
@@ -132,37 +133,7 @@ end)
 
 --// Rebirth (manejado por RebirthUIController.client.luau)
 
---// Shop
-for _,Gamepass in ReplicatedStorage.Gamepasses:GetChildren() do
-	local NewGamepass = script.GamepassTemplate:Clone()
-
-	local GamepassInfo
-
-	local Succes, Error = pcall(function()
-		GamepassInfo = MarketPlaceService:GetProductInfo(Gamepass.Value, Enum.InfoType.GamePass)
-	end)
-
-	if Error then 
-		warn("An error as occured while gathering gamepass data: "..Error) 
-		NewGamepass:Destroy() continue 
-	else
-		NewGamepass.InnerPart.ImageLabel.Image = "rbxassetid://"..(GamepassInfo.IconImageAssetId or 666669321)
-		NewGamepass.InnerPart.Description.Text = GamepassInfo.Description 
-		NewGamepass.InnerPart.GPName.Text = GamepassInfo.Name
-		NewGamepass.InnerPart.Price.Text = Data.Gamepasses[Gamepass.Name].Value and "Owned ✅" or "\u{E002}"..(GamepassInfo.PriceInRobux or 10000)
-
-		Data.Gamepasses[Gamepass.Name].Changed:Connect(function()
-			NewGamepass.InnerPart.Price.Text = Data.Gamepasses[Gamepass.Name].Value and "Owned ✅" or "\u{E002}"..GamepassInfo.PriceInRobux
-		end)
-
-		NewGamepass.InnerPart.Button.MouseButton1Click:Connect(function()
-			MarketPlaceService:PromptGamePassPurchase(Player, Gamepass.Value)
-			Utilities.Audio.PlayAudio("Click")
-		end)
-
-		NewGamepass.Parent = Frames.Shop.Gamepasses
-	end
-end
+--// Shop (handled by ShopController.client.luau)
 
 --// Pet Inventory
 local PetInventory = {} -- all pets will be added in this table
@@ -673,6 +644,14 @@ function TripleEgg()
 	local Egg = CurrentTarget.Value
 	if Egg == "None" then return end
 
+	if not Player:GetAttribute("TripleEgg") then
+		local productId = ProductConfigurations.PermanentProducts.TripleEgg
+		if productId and productId > 0 then
+			MarketPlaceService:PromptProductPurchase(Player, productId)
+		end
+		return
+	end
+
 	local Result = Remotes.Egg:InvokeServer(Egg, 3)
 
 	if Result ~= nil then
@@ -690,9 +669,9 @@ local function ChooseEggAmount(Egg)
 
 	local EggAmount = 1
 
-	if ReplicatedStorage.Gamepasses:FindFirstChild("TripleEgg") and not Player.Data.Gamepasses.TripleEgg.Value then 
+	if not Player:GetAttribute("TripleEgg") then
 		return EggAmount
-	end -- triple egg is a gamepass that the player doesn't own, so open 1 egg
+	end -- player doesn't own triple egg, so open 1 egg
 
 	local moneyStat = Player:FindFirstChild("leaderstats") and Player.leaderstats:FindFirstChild("Money")
 	if moneyStat and moneyStat.Value >= EggInfo.Cost.Value * 3 then
@@ -708,8 +687,11 @@ function AutoEgg()
 	local Egg = CurrentTarget.Value
 	if Egg == "None" then return end
 
-	if ReplicatedStorage.Gamepasses:FindFirstChild("AutoEgg") and not Player.Data.Gamepasses.AutoEgg.Value then
-		MarketPlaceService:PromptGamePassPurchase(ReplicatedStorage.Gamepasses.AutoEgg.Value)
+	if not Player:GetAttribute("AutoEgg") then
+		local productId = ProductConfigurations.PermanentProducts.AutoEgg
+		if productId and productId > 0 then
+			MarketPlaceService:PromptProductPurchase(Player, productId)
+		end
 		return
 	end
 

@@ -57,19 +57,9 @@ local function Initialize(player: Player, profile)
 	GamepassesFolder.Parent = MainFolder
 
 	for gamepassName, owned in Data.Gamepasses do
-		local gpValue = CreateValue("BoolValue", gamepassName, owned, GamepassesFolder)
-
-		-- Verificar con MarketplaceService si no lo tiene
-		if not owned and ReplicatedStorage.Gamepasses:FindFirstChild(gamepassName) then
-			local gpId = ReplicatedStorage.Gamepasses[gamepassName].Value
-			local success, ownsGamepass = pcall(function()
-				return MarketplaceService:UserOwnsGamePassAsync(player.UserId, gpId)
-			end)
-			if success and ownsGamepass then
-				gpValue.Value = true
-				Data.Gamepasses[gamepassName] = true
-			end
-		end
+		CreateValue("BoolValue", gamepassName, owned, GamepassesFolder)
+		-- Sync as player attribute for client access
+		player:SetAttribute(gamepassName, owned)
 	end
 
 	-- Carpeta Pets

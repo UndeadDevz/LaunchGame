@@ -182,8 +182,8 @@ Remotes.Egg.OnServerInvoke = function(Player, Egg, Amount)
 	if not EggInfo then print(Egg.." does not exist!") return end -- egg does not exist!
 	if EggInfo:FindFirstChild("ProductId") then return end -- robux egg
 
-	if Amount == 3 and ReplicatedStorage.Gamepasses:FindFirstChild("TripleEgg") and not Player.Data.Gamepasses.TripleEgg.Value then
-		return -- if this is true, it means the player is trying to open a triple egg while there is a gamepass which they don't own
+	if Amount == 3 and not Player:GetAttribute("TripleEgg") then
+		return -- player is trying to open triple egg without owning it
 	end
 
 	-- Usar PlayerController para verificar y deducir dinero
