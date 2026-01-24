@@ -39,16 +39,17 @@ local MAX_PLATFORM_INDEX = 500
 local RECYCLE_MIN_TIME = 30
 local RECYCLE_MAX_TIME = 90
 
--- Rarity weights configuration
--- BaseWeight: peso inicial en Platform_1
--- ScaleFactor: cómo escala con el índice (negativo = decrece, positivo = crece)
+-- Rarity configuration por rango de plataforma
+-- MinPlatform: plataforma mínima donde puede aparecer (0 = desde el inicio)
+-- MaxPlatform: plataforma máxima donde puede aparecer (999 = sin límite)
+-- Weight: peso base para el cálculo de probabilidad
 local RARITY_CONFIG = {
-	{Name = "Common",    BaseWeight = 100, ScaleFactor = -0.15},
-	{Name = "Uncommon",  BaseWeight = 50,  ScaleFactor = 0.05},
-	{Name = "Rare",      BaseWeight = 25,  ScaleFactor = 0.10},
-	{Name = "Epic",      BaseWeight = 10,  ScaleFactor = 0.15},
-	{Name = "Legendary", BaseWeight = 3,   ScaleFactor = 0.20},
-	{Name = "Mythic",    BaseWeight = 1,   ScaleFactor = 0.25},
+	{Name = "Common",    MinPlatform = 0,   MaxPlatform = 300, Weight = 100},
+	{Name = "Uncommon",  MinPlatform = 0,   MaxPlatform = 350, Weight = 60},
+	{Name = "Rare",      MinPlatform = 0,   MaxPlatform = 400, Weight = 30},
+	{Name = "Epic",      MinPlatform = 50,  MaxPlatform = 999, Weight = 15},
+	{Name = "Legendary", MinPlatform = 100, MaxPlatform = 999, Weight = 5},
+	{Name = "Mythic",    MinPlatform = 150, MaxPlatform = 999, Weight = 1},
 }
 
 local MUTATIONS = {
@@ -79,13 +80,33 @@ end
 -- Calcula los pesos de rareza basados en el índice de la plataforma
 local function calculateRarityWeights(platformIndex: number): {[string]: number}
 	local weights = {}
-	local normalizedIndex = platformIndex / MAX_PLATFORM_INDEX -- 0 to 1
+
+	-- Últimas 3 plataformas: solo Mythic
+	if platformIndex >= 498 then
+		weights["Mythic"] = 100
+		return weights
+	end
 
 	for _, rarity in ipairs(RARITY_CONFIG) do
-		-- Fórmula: peso = base * (1 + scaleFactor * normalizedIndex * 10)
-		local weight = rarity.BaseWeight * (1 + rarity.ScaleFactor * normalizedIndex * 10)
-		-- Asegurar peso mínimo para "golpes de suerte"
-		weights[rarity.Name] = math.max(weight, 0.5)
+		-- Solo incluir si la plataforma está dentro del rango permitido
+		if platformIndex >= rarity.MinPlatform and platformIndex <= rarity.MaxPlatform then
+			-- Escalar el peso basado en la posición dentro del rango
+			local rangeSize = rarity.MaxPlatform - rarity.MinPlatform
+			local positionInRange = platformIndex - rarity.MinPlatform
+
+			-- Para rarezas que desaparecen (Common, Uncommon, Rare): reducir peso gradualmente
+			if rarity.MaxPlatform < 999 then
+				local fadeProgress = positionInRange / rangeSize -- 0 al inicio, 1 al final
+				local fadeFactor = 1 - (fadeProgress * 0.8) -- Reduce hasta 20% del peso original
+				weights[rarity.Name] = rarity.Weight * fadeFactor
+			else
+				-- Para rarezas que aparecen después: aumentar peso gradualmente
+				local growthProgress = positionInRange / math.min(rangeSize, 200) -- Crece en las primeras 200 plataformas del rango
+				local growthFactor = math.min(growthProgress + 0.3, 1) -- Empieza en 30%, sube a 100%
+				weights[rarity.Name] = rarity.Weight * growthFactor
+			end
+		end
+		-- Si está fuera del rango, no se agrega (peso = 0)
 	end
 
 	return weights
