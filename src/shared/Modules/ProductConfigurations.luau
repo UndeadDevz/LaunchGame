@@ -16,9 +16,9 @@ ProductConfigurations.Products = {
 	["SpeedPlus5"] = 3506884534,
 	["SpeedPlus10"] = 3506884696,
 
-	["ForcePlus1"] = 0, -- TODO: Reemplazar con ID real de DevProduct
-	["ForcePlus5"] = 0, -- TODO: Reemplazar con ID real de DevProduct
-	["ForcePlus10"] = 0, -- TODO: Reemplazar con ID real de DevProduct
+	["ForcePlus1"] = 3521024791, -- TODO: Reemplazar con ID real de DevProduct
+	["ForcePlus5"] = 3521024990, -- TODO: Reemplazar con ID real de DevProduct
+	["ForcePlus10"] = 3521025153, -- TODO: Reemplazar con ID real de DevProduct
 
 	["CarryUpgrade_Lvl2"] = 3506887975, 
 	["CarryUpgrade_Lvl3"] = 3506888182,

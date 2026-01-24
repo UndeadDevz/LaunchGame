@@ -35,7 +35,7 @@ local activeSequence: {[Player]: {
 }} = {}
 
 -- [ CONFIG ]
-local SEQUENCE_DURATION = 5
+local SEQUENCE_DURATION = 5000
 
 -- [ HELPERS ]
 

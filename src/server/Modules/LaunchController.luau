@@ -71,8 +71,12 @@ function LaunchController.Launch(player: Player)
 	if force < 1 then force = 1 end
 	local launchPower = getLaunchPower(force)
 
-	-- Posicionar y lanzar
-	rootPart.CFrame = CFrame.new(CONFIG.launchPosition)
+	-- Activar PlatformStand para evitar que el Humanoid interfiera durante el vuelo
+	humanoid.PlatformStand = true
+
+	-- Posicionar con orientación fija (mirando hacia -X) y lanzar
+	rootPart.CFrame = CFrame.new(CONFIG.launchPosition) * CFrame.Angles(0, math.rad(90), 0)
+	rootPart.AssemblyAngularVelocity = Vector3.zero -- Sin rotación
 	rootPart.AssemblyLinearVelocity = Vector3.new(-launchPower, launchPower * CONFIG.verticalMultiplier, 0)
 	print("[LaunchController] Player launched with power:", launchPower)
 
@@ -82,16 +86,74 @@ function LaunchController.Launch(player: Player)
 	local bestDistance = DataManager.GetStat(player, "BestDistance") or 0
 
 	local distanceEvent = ReplicatedStorage:FindFirstChild("DistanceUpdateEvent")
-	local connection
+	local heartbeatConnection
+	local touchConnection
+	local hasLanded = false
+	local canLand = false -- No puede aterrizar hasta que esté en el aire
 
-	connection = RunService.Heartbeat:Connect(function()
+	-- Función para aterrizar
+	local function land()
+		if hasLanded or not canLand then return end
+		hasLanded = true
+
+		if heartbeatConnection then heartbeatConnection:Disconnect() end
+		if touchConnection then touchConnection:Disconnect() end
+
+		-- Cancelar toda la física inmediatamente
+		rootPart.Anchored = true
+		task.wait() -- Un frame para que se aplique
+		rootPart.AssemblyLinearVelocity = Vector3.zero
+		rootPart.AssemblyAngularVelocity = Vector3.zero
+		rootPart.Anchored = false
+
+		-- Desactivar PlatformStand para que pueda caminar
+		humanoid.PlatformStand = false
+
+		local finalDistance = startPos - lastPos
+		if distanceEvent then
+			distanceEvent:FireClient(player, finalDistance, false)
+		end
+
+		launchingPlayers[player] = nil
+	end
+
+	-- Detectar contacto con Touched (inmediato)
+	touchConnection = rootPart.Touched:Connect(function(hit)
+		if not canLand then return end
+		-- Ignorar partes del propio personaje
+		if hit:IsDescendantOf(character) then return end
+		-- Ignorar partes no canCollide
+		if not hit.CanCollide then return end
+		land()
+	end)
+
+	local fixedZ = CONFIG.launchPosition.Z -- Mantener Z fija
+
+	heartbeatConnection = RunService.Heartbeat:Connect(function()
 		if not character or not character.Parent then
-			connection:Disconnect()
-			launchingPlayers[player] = nil
+			canLand = true
+			land()
 			return
 		end
 
+		-- Mantener el vuelo recto: fijar Z y eliminar rotación
+		local pos = rootPart.Position
+		if math.abs(pos.Z - fixedZ) > 0.1 then
+			rootPart.CFrame = CFrame.new(pos.X, pos.Y, fixedZ) * CFrame.Angles(0, math.rad(90), 0)
+		end
+		rootPart.AssemblyAngularVelocity = Vector3.zero
+
 		local currentPos = rootPart.Position.X
+
+		-- Permitir aterrizar después de viajar cierta distancia y empezar a caer
+		if not canLand then
+			local distanceTraveled = startPos - currentPos
+			local isFalling = rootPart.AssemblyLinearVelocity.Y < 0
+			if distanceTraveled > 50 and isFalling then
+				canLand = true
+			end
+		end
+
 		if currentPos < lastPos then
 			local distance = startPos - currentPos
 
@@ -107,19 +169,10 @@ function LaunchController.Launch(player: Player)
 			lastPos = currentPos
 		end
 
-		-- Detectar aterrizaje
-		local hasLanded = rootPart.AssemblyLinearVelocity.Magnitude < CONFIG.minVelocityThreshold
-			or rootPart.Position.Y < CONFIG.minHeightThreshold
-
-		if hasLanded then
-			connection:Disconnect()
-
-			local finalDistance = startPos - lastPos
-			if distanceEvent then
-				distanceEvent:FireClient(player, finalDistance, false)
-			end
-
-			launchingPlayers[player] = nil
+		-- Fallback: si cae muy bajo
+		if rootPart.Position.Y < CONFIG.minHeightThreshold then
+			canLand = true
+			land()
 		end
 	end)
 end
