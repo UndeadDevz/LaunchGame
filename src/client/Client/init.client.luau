@@ -705,6 +705,7 @@ Remotes.Egg.OnClientInvoke = HatchEgg
 
 function SingleEgg()
 	local Egg = CurrentTarget.Value
+	if Egg == "None" then return end
 
 	local EggInfo = ReplicatedStorage.Eggs[Egg]
 
@@ -721,6 +722,7 @@ end
 
 function TripleEgg()
 	local Egg = CurrentTarget.Value
+	if Egg == "None" then return end
 
 	local Result = Remotes.Egg:InvokeServer(Egg, 3)
 
@@ -753,12 +755,14 @@ end
 function AutoEgg()
 	if IsAutoOpening then return end
 
-	if ReplicatedStorage.Gamepasses:FindFirstChild("AutoEgg") and not Player.Data.Gamepasses.AutoEgg.Value then 
+	local Egg = CurrentTarget.Value
+	if Egg == "None" then return end
+
+	if ReplicatedStorage.Gamepasses:FindFirstChild("AutoEgg") and not Player.Data.Gamepasses.AutoEgg.Value then
 		MarketPlaceService:PromptGamePassPurchase(ReplicatedStorage.Gamepasses.AutoEgg.Value)
 		return
 	end
 
-	local Egg = CurrentTarget.Value	
 	IsAutoOpening = true
 
 	while true do

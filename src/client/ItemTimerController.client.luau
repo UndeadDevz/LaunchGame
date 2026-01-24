@@ -14,16 +14,16 @@ local function formatTime(seconds: number): string
 	return string.format("%02d:%02d", m, s)
 end
 
--- Optimize: We scan for GUIs inside the ItemSpawners folder
-local spawnersFolder = Workspace:WaitForChild("ItemSpawners")
+-- Scan for GUIs inside the LandPlatforms folder
+local platformsFolder = Workspace:WaitForChild("LandPlatforms")
 
 RunService.Heartbeat:Connect(function()
 	local now = Workspace:GetServerTimeNow()
 
-	-- Loop through all spawners
-	for _, spawner in ipairs(spawnersFolder:GetChildren()) do
-		-- Loop through items in spawner
-		for _, item in ipairs(spawner:GetChildren()) do
+	-- Loop through all platforms
+	for _, platform in ipairs(platformsFolder:GetChildren()) do
+		-- Loop through items in platform
+		for _, item in ipairs(platform:GetChildren()) do
 			if item:IsA("Model") and item:GetAttribute("IsSpawnedItem") then
 
 				local expiresAt = item:GetAttribute("ExpiresAt")
