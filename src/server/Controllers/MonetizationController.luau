@@ -17,6 +17,76 @@ local SpeedSystem
 local ForceSystem
 local CarryUpgradeSystem
 
+-- [ ROBUX EGG HELPERS ]
+local function GetPet(SelectedEgg)
+	local TotalWeight = 0
+	for _, v in SelectedEgg:GetChildren() do
+		TotalWeight += v.Value
+	end
+
+	local Chance = Random.new():NextNumber(0.0001, TotalWeight)
+	local Counter = 0
+
+	for _, v in SelectedEgg:GetChildren() do
+		Counter += v.Value
+		if Counter >= Chance then
+			return v.Name
+		end
+	end
+	return nil
+end
+
+local function RandomID(Folder)
+	local Chance = math.random(1, 10000)
+	if Folder:FindFirstChild(tostring(Chance)) then
+		return RandomID(Folder)
+	end
+	return tostring(Chance)
+end
+
+local function ProcessRobuxEgg(player, eggName)
+	local EggInfo = ReplicatedStorage:FindFirstChild("Eggs") and ReplicatedStorage.Eggs:FindFirstChild(eggName)
+	if not EggInfo then return nil end
+
+	local ChosenPet = GetPet(EggInfo.Pets)
+	if ChosenPet then
+		-- Set opening state
+		local nonSaveValues = player:FindFirstChild("NonSaveValues")
+		if nonSaveValues and nonSaveValues:FindFirstChild("IsOpeningEgg") then
+			nonSaveValues.IsOpeningEgg.Value = true
+			task.delay(3, function()
+				if nonSaveValues and nonSaveValues:FindFirstChild("IsOpeningEgg") then
+					nonSaveValues.IsOpeningEgg.Value = false
+				end
+			end)
+		end
+
+		-- Invoke client for animation
+		local Remotes = ReplicatedStorage:FindFirstChild("Remotes")
+		local EggRemote = Remotes and Remotes:FindFirstChild("Egg")
+		if EggRemote then
+			EggRemote:InvokeClient(player, eggName, ChosenPet, 0)
+		end
+
+		-- Create pet in Player.Data.Pets (DataManager syncs to ProfileStore)
+		local playerData = player:FindFirstChild("Data")
+		local petsFolder = playerData and playerData:FindFirstChild("Pets")
+		if petsFolder then
+			local Assets = ReplicatedStorage:FindFirstChild("Assets")
+			local PetTemplate = Assets and Assets:FindFirstChild("PetTemplate")
+			if PetTemplate then
+				local NewPet = PetTemplate:Clone()
+				NewPet.Name = RandomID(petsFolder)
+				NewPet.PetName.Value = ChosenPet
+				NewPet.Parent = petsFolder
+			end
+		end
+
+		return ChosenPet
+	end
+	return nil
+end
+
 function MonetizationController.ProcessReceipt(receiptInfo)
 	local player = Players:GetPlayerByUserId(receiptInfo.PlayerId)
 	if not player then return Enum.ProductPurchaseDecision.NotProcessedYet end
@@ -96,6 +166,20 @@ function MonetizationController.ProcessReceipt(receiptInfo)
 
 		if notif then notif:FireClient(player, permanentName .. " Purchased!", "Success") end
 		return Enum.ProductPurchaseDecision.PurchaseGranted
+	end
+
+	-- 8. ROBUX EGGS
+	local EggsFolder = ReplicatedStorage:FindFirstChild("Eggs")
+	if EggsFolder then
+		for _, EggInfo in EggsFolder:GetChildren() do
+			local ProductIdValue = EggInfo:FindFirstChild("ProductId")
+			if ProductIdValue and tonumber(ProductIdValue.Value) == productId then
+				local petChosen = ProcessRobuxEgg(player, EggInfo.Name)
+				if petChosen then
+					return Enum.ProductPurchaseDecision.PurchaseGranted
+				end
+			end
+		end
 	end
 
 	return Enum.ProductPurchaseDecision.NotProcessedYet

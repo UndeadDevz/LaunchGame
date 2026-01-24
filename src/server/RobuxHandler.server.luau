@@ -68,22 +68,4 @@ function RandomID(Folder)
 end
 
 
-MarketPlaceService.ProcessReceipt = function(ReceiptInfo)
-	local Player = Players:GetPlayerByUserId(ReceiptInfo.PlayerId)
-
-	for _, EggInfo in ReplicatedStorage.Eggs:GetChildren() do
-		if not EggInfo:FindFirstChild("ProductId") then continue end
-
-		if tonumber(EggInfo.ProductId.Value) == ReceiptInfo.ProductId then
-			local PetChosen = GetRobuxEgg(Player, EggInfo.Name)	-- this selects a random pet from the egg
-
-			--// Create Pet
-			local NewPet = game.ReplicatedStorage.Assets.PetTemplate:Clone()
-			NewPet.Name = RandomID(Player.Data.Pets)
-			NewPet.PetName.Value = PetChosen
-			NewPet.Parent = Player.Data.Pets
-
-			return Enum.ProductPurchaseDecision.PurchaseGranted
-		end
-	end	
-end
+-- ProcessReceipt moved to MonetizationController
