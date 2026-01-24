@@ -1,6 +1,7 @@
 --// Services
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local Players = game:GetService("Players")
+local ServerScriptService = game:GetService("ServerScriptService")
 
 --// Variables
 local Remotes = ReplicatedStorage:WaitForChild("Remotes")
@@ -9,6 +10,7 @@ local Modules = ReplicatedStorage.Modules
 local GameSettings = require(Modules.GameSettings)
 local Multipliers = require(Modules.Multipliers)
 local PetMultipliers = require(Modules.PetMultipliers)
+local PlayerController = require(ServerScriptService.Controllers.PlayerController)
 
 local Cooldowns = {}
 
@@ -35,30 +37,6 @@ end)
 -- Music
 Remotes.Setting.OnServerEvent:Connect(function(Player, SettingName, Toggled)
 	Player.Data.PlayerData[SettingName].Value = Toggled
-end)
-
--- Rebirth
-function Rebirth(Player) -- this will run the action when you passed all requirements for rebirthing
-	Player.Data.PlayerData.Currency.Value = 0
-	Player.Data.PlayerData.Rebirth.Value += 1
-	Player.Data.PlayerData.Currency2.Value += 10 -- gems
-end
-
-Remotes.Rebirth.OnServerEvent:Connect(function(Player)
-	if Cooldowns[Player.Name] == false then
-		Cooldowns[Player.Name] = true
-		if GameSettings.RebirthType == "Linear" then
-			if Player.Data.PlayerData.Currency.Value >= GameSettings.RebirthBasePrice * (Player.Data.PlayerData.Rebirth.Value + 1) then
-				Rebirth(Player)
-			end
-		else
-			if Player.Data.PlayerData.Currency.Value >= GameSettings.RebirthBasePrice * (GameSettings.RebirthMultiplier + 1.25) ^ Player.Data.PlayerData.Rebirth.Value then
-				Rebirth(Player)
-			end
-		end
-		task.wait(0.08)
-		Cooldowns[Player.Name] = false
-	end
 end)
 
 -- Pet
@@ -208,35 +186,40 @@ Remotes.Egg.OnServerInvoke = function(Player, Egg, Amount)
 		return -- if this is true, it means the player is trying to open a triple egg while there is a gamepass which they don't own
 	end
 
-	if Player.Data.PlayerData.Currency.Value >= EggInfo.Cost.Value * Amount then
-		Player.Data.PlayerData.Currency.Value -= EggInfo.Cost.Value * Amount
-		Player.Data.PlayerData.EggsHatched.Value += Amount
-		Player.NonSaveValues.IsOpeningEgg.Value = true
+	-- Usar PlayerController para verificar y deducir dinero
+	local profile = PlayerController:GetProfile(Player)
+	if not profile then return end
 
-		coroutine.wrap(function()
-			task.wait(3)
-			Player.NonSaveValues.IsOpeningEgg.Value = false
-		end)()
+	local totalCost = EggInfo.Cost.Value * Amount
+	if profile.Data.Money < totalCost then return end -- no tiene suficiente dinero
 
-		local Results = {}
+	-- Deducir dinero usando PlayerController
+	if not PlayerController:DeductMoney(Player, totalCost) then return end
 
-		local LuckMultiplier = Multipliers.GetLuckMultiplier(Player)
+	Player.NonSaveValues.IsOpeningEgg.Value = true
 
-		for i = 1, Amount do
-			local PetName = ChooseRandomPet(Egg, LuckMultiplier) 
+	coroutine.wrap(function()
+		task.wait(3)
+		Player.NonSaveValues.IsOpeningEgg.Value = false
+	end)()
 
-			if not Player.Data.AutoDelete[PetName].Value then -- auto delete
-				local NewPet = game.ReplicatedStorage.Assets.PetTemplate:Clone()
-				NewPet.Name = RandomID(Player.Data.Pets)
-				NewPet.PetName.Value = PetName
-				NewPet.Parent = Player.Data.Pets
-			end
+	local Results = {}
+	local LuckMultiplier = Multipliers.GetLuckMultiplier(Player)
 
-			Results[i] = PetName
+	for i = 1, Amount do
+		local PetName = ChooseRandomPet(Egg, LuckMultiplier)
+
+		if not Player.Data.AutoDelete[PetName].Value then -- auto delete
+			local NewPet = game.ReplicatedStorage.Assets.PetTemplate:Clone()
+			NewPet.Name = RandomID(Player.Data.Pets)
+			NewPet.PetName.Value = PetName
+			NewPet.Parent = Player.Data.Pets
 		end
 
-		return Results
+		Results[i] = PetName
 	end
+
+	return Results
 end
 
 --// Auto Delete

@@ -55,29 +55,34 @@ local Frames = UI.Frames
 
 local Remotes = ReplicatedStorage.Remotes
 
---// Overlay
+--// Overlay (Using leaderstats.Money)
 local CurrencySide = UI[GameSettings.CurrencySide]
-CurrencySide.CurrencyLabel.Amount.Text = Utilities.Short.en(PlayerData.Currency.Value)
-PlayerData.Currency.Changed:Connect(function()
-	CurrencySide.CurrencyLabel.Amount.Text = Utilities.Short.en(PlayerData.Currency.Value)
+local leaderstats = Player:WaitForChild("leaderstats")
+local MoneyStat = leaderstats:WaitForChild("Money")
+
+CurrencySide.CurrencyLabel.Amount.Text = Utilities.Short.en(MoneyStat.Value)
+MoneyStat.Changed:Connect(function()
+	CurrencySide.CurrencyLabel.Amount.Text = Utilities.Short.en(MoneyStat.Value)
 end)
 
-CurrencySide.CurrencyLabel2.Amount.Text = Utilities.Short.en(PlayerData.Currency2.Value)
-PlayerData.Currency2.Changed:Connect(function()
+-- Currency2 (Gems) - mantener sistema antiguo si existe
+if PlayerData:FindFirstChild("Currency2") then
 	CurrencySide.CurrencyLabel2.Amount.Text = Utilities.Short.en(PlayerData.Currency2.Value)
-end)
-
+	PlayerData.Currency2.Changed:Connect(function()
+		CurrencySide.CurrencyLabel2.Amount.Text = Utilities.Short.en(PlayerData.Currency2.Value)
+	end)
+end
 
 --// Popups
-local CurrencyOld = PlayerData.Currency.Value
-PlayerData.Currency.Changed:Connect(function(NewValue)
+local CurrencyOld = MoneyStat.Value
+MoneyStat.Changed:Connect(function(NewValue)
 	task.spawn(function()
 		if NewValue > CurrencyOld then
 			local NewPopup = script.Popup:Clone()
 			NewPopup.Size = UDim2.new(0,0,0,0)
 			NewPopup.Currency.Image = CurrencySide.CurrencyLabel.Currency.Image
 			NewPopup.Amount.Text = "+"..Utilities.Short.en(NewValue - CurrencyOld)
-			NewPopup.Position = UDim2.new(math.random(40, 60) / 100, 0, math.random(40, 60) / 100, 0) -- sets it in a random position in the middle square
+			NewPopup.Position = UDim2.new(math.random(40, 60) / 100, 0, math.random(40, 60) / 100, 0)
 			NewPopup.Parent = UI.Popups
 			NewPopup:TweenSize(UDim2.new(0.176,0,0.105,0), Enum.EasingDirection.In, Enum.EasingStyle.Quad, 0.5)
 			task.wait(1)
@@ -156,32 +161,7 @@ ShowOtherPetsSetting.Toggle.Off.Click.MouseButton1Click:Connect(function()
 	Utilities.Audio.PlayAudio("Click")
 end)
 
---// Rebirth
-local RebirthPrice, RebirthMulti = GameSettings.RebirthBasePrice, GameSettings.RebirthMultiplier
-
-function UpdateRebirthInfo()
-	Frames.Rebirth.Counter.Text = "You have "..Utilities.Short.en(PlayerData.Rebirth.Value).." Rebirths"
-	if GameSettings.RebirthType == "Linear" then
-		Frames.Rebirth.Description.Text = "Buying a Rebirth will increase your "..GameSettings.CurrencyName.." Multiplier with x"..RebirthMulti
-		Frames.Rebirth.Cost.Text = "You need atleast "..Utilities.Short.en(RebirthPrice * (PlayerData.Rebirth.Value + 1)).." "..GameSettings.CurrencyName
-	elseif GameSettings.RebirthType == "Exponential" then
-		Frames.Rebirth.Description.Text = "Buying a Rebirth will increase your "..GameSettings.CurrencyName.." Multiplier with ^"..(RebirthMulti+0.5)
-		Frames.Rebirth.Cost.Text = "You need atleast "..Utilities.Short.en(RebirthPrice * ((RebirthMulti+1.25) ^ PlayerData.Rebirth.Value)).." "..GameSettings.CurrencyName
-	end
-end
-
-UpdateRebirthInfo()
-
-PlayerData.Rebirth.Changed:Connect(function()
-	UpdateRebirthInfo()
-end)
-
-Utilities.ButtonAnimations.Create(Frames.Rebirth.Buy)
-
-Frames.Rebirth.Buy.Click.MouseButton1Click:Connect(function()
-	Remotes.Rebirth:FireServer()
-	Utilities.Audio.PlayAudio("Click")
-end)
+--// Rebirth (manejado por RebirthUIController.client.luau)
 
 --// Shop
 for _,Gamepass in ReplicatedStorage.Gamepasses:GetChildren() do
@@ -745,7 +725,8 @@ local function ChooseEggAmount(Egg)
 		return EggAmount
 	end -- triple egg is a gamepass that the player doesn't own, so open 1 egg
 
-	if PlayerData.Currency.Value >= EggInfo.Cost.Value * 3 then
+	local moneyStat = Player:FindFirstChild("leaderstats") and Player.leaderstats:FindFirstChild("Money")
+	if moneyStat and moneyStat.Value >= EggInfo.Cost.Value * 3 then
 		EggAmount = 3
 	end
 

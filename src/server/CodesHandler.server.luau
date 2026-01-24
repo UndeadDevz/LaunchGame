@@ -1,59 +1,50 @@
 --[[
 Code system originally made by Croissant God, on roblox @DemonicMakesGames
+Adapted to use PlayerController Money system
 ]]
 
 local Codes = {
-	["100CASH"] = {100, "Currency"}, -- Put in amount, then the stat name
-	["100DIAMONDS"] = {100, "Diamonds"},
-	["3REBIRTHS"] = {3, "Rebirths"},
-	["Scarecrow"] = {"Pumpkin"}, -- Put in pet name
+	["100CASH"] = {100, "Money"},
+	["500CASH"] = {500, "Money"},
+	["1000CASH"] = {1000, "Money"},
 }
-
-
 
 --------- Main Script ---------
 
 --// Services
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local DataStoreService = game:GetService("DataStoreService")
+local ServerScriptService = game:GetService("ServerScriptService")
 
---// Functions
-function RandomID(Folder)
-	local Chance = math.random(1, 20000)
-	if Folder:FindFirstChild(tostring(Chance)) then
-		return RandomID(Folder)
-	end
-	return Chance
-end
+--// Modules
+local PlayerController = require(ServerScriptService.Controllers.PlayerController)
 
 --// Variables
-local CodeStore = DataStoreService:GetDataStore("CodesStore")
+local CodeStore = DataStoreService:GetDataStore("CodesStore_v2")
 
 --// Main
 ReplicatedStorage.Remotes.RedeemCode.OnServerEvent:Connect(function(Player, Code)
 	if not Codes[Code] then return end -- code doesnt exist
 
-	local isRedeemed = CodeStore:GetAsync(Code.."_"..tostring(Player.UserId))
-	
+	local isRedeemed = pcall(function()
+		return CodeStore:GetAsync(Code.."_"..tostring(Player.UserId))
+	end)
+
 	if isRedeemed then return end -- Already redeemed
-	
-	if type(Codes[Code][1]) == "number" then -- Stat
-		if Codes[Code][2] == "Diamonds" then
-			Player.Data.PlayerData.Currency2.Value += Codes[Code][1]
-		elseif Codes[Code][2] == "Currency" then
-			Player.Data.PlayerData.Currency.Value += Codes[Code][1]
-			Player.Data.PlayerData.TotalCurrency.Value += Codes[Code][1]
-		elseif Codes[Code][2] == "Rebirths" then
-			Player.Data.PlayerData.Rebirth.Value += Codes[Code][1]
-		else
-			return
+
+	local codeData = Codes[Code]
+
+	if type(codeData[1]) == "number" and codeData[2] == "Money" then
+		PlayerController:AddMoney(Player, codeData[1])
+
+		local Events = ReplicatedStorage:FindFirstChild("Events")
+		local notif = Events and Events:FindFirstChild("ShowNotification")
+		if notif then
+			notif:FireClient(Player, "Code Redeemed! +$" .. codeData[1], "Success")
 		end
-	else -- Pet
-		if ReplicatedStorage.Pets:FindFirstChild(Codes[Code][1]) == nil then warn("Error: "..Codes[Code][1].." Does not exist") return end -- Pet doesn't exist
-		local NewPet = game.ReplicatedStorage.Assets.PetTemplate:Clone()
-		NewPet.Name = RandomID(Player.Data.Pets)
-		NewPet.PetName.Value = Codes[Code][1]
-		NewPet.Parent = Player.Data.Pets
+
+		pcall(function()
+			CodeStore:SetAsync(Code.."_"..tostring(Player.UserId), true)
+		end)
 	end
-	CodeStore:SetAsync(Code.."_"..tostring(Player.UserId), true)
 end)
