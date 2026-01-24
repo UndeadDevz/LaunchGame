@@ -35,7 +35,7 @@ local activeSequence: {[Player]: {
 }} = {}
 
 -- [ CONFIG ]
-local SEQUENCE_DURATION = 5000
+local SEQUENCE_DURATION = 10
 
 -- [ HELPERS ]
 
@@ -267,6 +267,51 @@ end
 -- Llamar desde el sensor de salida para cancelar la secuencia si el jugador sale caminando
 function CarrySystem.CancelSequence(player: Player)
 	cancelSequence(player)
+end
+
+-- Convierte items del carry en tools y teleporta al jugador a Destination
+function CarrySystem.DeliverAndTeleport(player: Player)
+	-- Cancelar secuencia activa si existe
+	local sequence = activeSequence[player]
+	if sequence and sequence.thread then
+		task.cancel(sequence.thread)
+	end
+	activeSequence[player] = nil
+
+	-- Capturar items antes de limpiar
+	local items = carryingData[player]
+	local character = player.Character
+
+	-- Limpiar datos
+	carryingData[player] = {}
+
+	-- Teleportar al jugador
+	if character then
+		local rootPart = character:FindFirstChild("HumanoidRootPart") :: BasePart?
+		if rootPart then
+			local destinationCFrame = Destination.CFrame + Vector3.new(0, 3, 0)
+			rootPart.CFrame = destinationCFrame
+		end
+	end
+
+	-- Entregar ítems como tools
+	if items and #items > 0 then
+		for _, itemData in ipairs(items) do
+			ItemManager.GiveItemToPlayer(player, itemData.Name, itemData.Mutation, itemData.Rarity, 1)
+		end
+
+		-- Sonido de éxito
+		local successSound = GlobalSounds:FindFirstChild("Success")
+		if successSound and successSound:IsA("Sound") then
+			local newSound = successSound:Clone()
+			newSound.Parent = player:WaitForChild("PlayerGui")
+			newSound:Play()
+			Debris:AddItem(newSound, newSound.TimeLength + 1)
+		end
+	end
+
+	-- Ocultar CarryGUI
+	hideCarryGUI(player)
 end
 
 -- [ INIT & START ]
