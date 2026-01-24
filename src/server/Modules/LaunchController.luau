@@ -90,6 +90,7 @@ function LaunchController.Launch(player: Player)
 	local touchConnection
 	local hasLanded = false
 	local canLand = false -- No puede aterrizar hasta que esté en el aire
+	local launchTime = tick()
 
 	-- Función para aterrizar
 	local function land()
@@ -145,11 +146,17 @@ function LaunchController.Launch(player: Player)
 
 		local currentPos = rootPart.Position.X
 
-		-- Permitir aterrizar después de viajar cierta distancia y empezar a caer
+		-- Permitir aterrizar después de:
+		-- 1. Viajar cierta distancia y empezar a caer, O
+		-- 2. Pasar cierto tiempo (timeout de seguridad), O
+		-- 3. Velocidad muy baja (ya frenó)
 		if not canLand then
 			local distanceTraveled = startPos - currentPos
 			local isFalling = rootPart.AssemblyLinearVelocity.Y < 0
-			if distanceTraveled > 50 and isFalling then
+			local timePassed = tick() - launchTime
+			local velocityMag = rootPart.AssemblyLinearVelocity.Magnitude
+
+			if (distanceTraveled > 20 and isFalling) or timePassed > 1 or velocityMag < 10 then
 				canLand = true
 			end
 		end
@@ -171,6 +178,12 @@ function LaunchController.Launch(player: Player)
 
 		-- Fallback: si cae muy bajo
 		if rootPart.Position.Y < CONFIG.minHeightThreshold then
+			canLand = true
+			land()
+		end
+
+		-- Timeout absoluto: forzar aterrizaje después de 30 segundos
+		if tick() - launchTime > 30 then
 			canLand = true
 			land()
 		end
