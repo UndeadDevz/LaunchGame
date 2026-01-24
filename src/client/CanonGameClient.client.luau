@@ -1,17 +1,26 @@
 --[[
 	Cannon Game Client Script
 
-	Muestra la distancia durante el vuelo.
-	El lanzamiento se activa automáticamente al estar en LaunchPlatform.
+	Maneja el botón de lanzamiento y muestra la distancia durante el vuelo.
 ]]
 
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 local player = Players.LocalPlayer
+local playerGui = player:WaitForChild("PlayerGui")
 
 -- RemoteEvents
+local launchEvent = ReplicatedStorage:WaitForChild("LaunchEvent")
 local distanceUpdateEvent = ReplicatedStorage:WaitForChild("DistanceUpdateEvent")
+
+-- Conectar botón de lanzamiento
+local gui = playerGui:WaitForChild("GUI")
+local launchButton = gui:WaitForChild("LaunchButton")
+
+launchButton.MouseButton1Click:Connect(function()
+	launchEvent:FireServer()
+end)
 
 -- Estado de vuelo
 local isFlying = false

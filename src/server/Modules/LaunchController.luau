@@ -27,7 +27,6 @@ local CONFIG = {
 	verticalMultiplier = 0.3,
 	minVelocityThreshold = 5,
 	minHeightThreshold = -100,
-	respawnDelay = 2,
 }
 
 local function getLaunchPower(speedLevel: number): number
@@ -114,9 +113,7 @@ function LaunchController.Launch(player: Player)
 				distanceEvent:FireClient(player, finalDistance, false)
 			end
 
-			task.wait(CONFIG.respawnDelay)
 			launchingPlayers[player] = nil
-			player:LoadCharacter()
 		end
 	end)
 end
