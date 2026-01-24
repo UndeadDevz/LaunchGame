@@ -91,7 +91,7 @@ local function createOption(amount: number)
 		local productKey = "ForcePlus" .. amount
 		local productId = ProductConfigurations.Products[productKey]
 
-		if productId then
+		if productId and productId > 0 then
 			robuxBtn.MouseButton1Click:Connect(function()
 				MarketplaceService:PromptProductPurchase(player, productId)
 			end)
@@ -110,6 +110,7 @@ local function createOption(amount: number)
 				end
 			end)
 		else
+			-- Producto no configurado aún, ocultar botón
 			robuxBtn.Visible = false
 		end
 	end

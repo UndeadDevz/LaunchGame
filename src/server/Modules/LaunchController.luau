@@ -18,6 +18,7 @@ local LaunchController = {}
 
 -- Estado de sesión (no persistente)
 local launchingPlayers: {[Player]: boolean} = {}
+local customForceValues: {[Player]: number} = {}
 local initialized = false
 
 -- Configuración
@@ -62,8 +63,12 @@ function LaunchController.Launch(player: Player)
 	print("[LaunchController] All checks passed, launching player")
 	launchingPlayers[player] = true
 
-	-- Obtener Force del jugador
-	local force = ForceSystem and ForceSystem.GetForce(player) or 1
+	-- Obtener Force del jugador (usar custom si existe, sino el máximo)
+	local maxForce = ForceSystem and ForceSystem.GetForce(player) or 1
+	local force = customForceValues[player] or maxForce
+	-- Asegurar que no exceda el máximo
+	if force > maxForce then force = maxForce end
+	if force < 1 then force = 1 end
 	local launchPower = getLaunchPower(force)
 
 	-- Posicionar y lanzar
@@ -145,14 +150,34 @@ function LaunchController:Init()
 	local launchEvent = createEvent("LaunchEvent")
 	createEvent("DistanceUpdateEvent")
 
+	-- Crear evento en Events folder para SetCustomForce
+	local Events = ReplicatedStorage:WaitForChild("Events")
+	local setCustomForceEvent = Events:FindFirstChild("SetCustomForce")
+	if not setCustomForceEvent then
+		setCustomForceEvent = Instance.new("RemoteEvent")
+		setCustomForceEvent.Name = "SetCustomForce"
+		setCustomForceEvent.Parent = Events
+	end
+
 	-- Conectar evento de lanzamiento
 	launchEvent.OnServerEvent:Connect(function(player)
 		LaunchController.Launch(player)
 	end)
 
+	-- Conectar evento de Force personalizado
+	setCustomForceEvent.OnServerEvent:Connect(function(player, force)
+		if typeof(force) == "number" then
+			local maxForce = ForceSystem and ForceSystem.GetForce(player) or 1
+			-- Validar que no exceda el máximo ni sea menor a 1
+			force = math.clamp(force, 1, maxForce)
+			customForceValues[player] = force
+		end
+	end)
+
 	-- Limpieza cuando el jugador sale
 	Players.PlayerRemoving:Connect(function(player)
 		LaunchController.CleanupPlayer(player)
+		customForceValues[player] = nil
 	end)
 
 	print("[LaunchController] Initialized")

@@ -10,11 +10,12 @@ local MonetizationController = {}
 
 -- [ MODULES ]
 local ProductConfigurations = require(ReplicatedStorage.Modules.ProductConfigurations)
-local RebirthSystem 
-local ItemManager 
-local PlayerController 
+local RebirthSystem
+local ItemManager
+local PlayerController
 local SpeedSystem
-local CarryUpgradeSystem -- ## ADDED ##
+local ForceSystem
+local CarryUpgradeSystem
 
 function MonetizationController.ProcessReceipt(receiptInfo)
 	local player = Players:GetPlayerByUserId(receiptInfo.PlayerId)
@@ -40,7 +41,16 @@ function MonetizationController.ProcessReceipt(receiptInfo)
 		return Enum.ProductPurchaseDecision.PurchaseGranted
 	end
 
-	-- 4. ## ADDED: CARRY UPGRADES ##
+	-- 4. FORCE PRODUCTS
+	local forceAmount = ProductConfigurations.ForceProductRewards[productName]
+	if forceAmount then
+		if not ForceSystem then ForceSystem = require(ServerScriptService.Modules.ForceSystem) end
+		ForceSystem.GrantForce(player, forceAmount)
+		if notif then notif:FireClient(player, "+" .. forceAmount .. " Force Purchased!", "Success") end
+		return Enum.ProductPurchaseDecision.PurchaseGranted
+	end
+
+	-- 5. CARRY UPGRADES
 	local targetLevel = ProductConfigurations.CarryUpgradeMap[productName]
 	if targetLevel then
 		if not CarryUpgradeSystem then CarryUpgradeSystem = require(ServerScriptService.Modules.CarryUpgradeSystem) end

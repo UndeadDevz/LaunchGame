@@ -23,16 +23,22 @@ local ENTRY_TEMPLATE_NAME = "LeaderboardEntry"
 -- Configuration
 local LEADERBOARDS_CONFIG = {
 	Money = {
-		StoreName = "GlobalMoney_v1",       -- Unique DataStore name for Money
-		ModelName = "MoneyLeaderboard",     -- Name of the Model in Workspace
-		DataKey = "Money",                  -- Key in PlayerController Data
+		StoreName = "GlobalMoney_v1",
+		ModelName = "MoneyLeaderboard",
+		DataKey = "Money",
 		ScoreFormatter = function(score) return "$" .. NumberFormatter.Format(score) end
 	},
 	Speed = {
-		StoreName = "GlobalSpeed_v2",       -- Unique DataStore name for Speed
-		ModelName = "SpeedLeaderboard",     -- Name of the Model in Workspace
-		DataKey = "Speed",                  -- Key in PlayerController Data
+		StoreName = "GlobalSpeed_v2",
+		ModelName = "SpeedLeaderboard",
+		DataKey = "Speed",
 		ScoreFormatter = function(score) return NumberFormatter.Format(score) .. " Speed" end
+	},
+	Force = {
+		StoreName = "GlobalForce_v1",
+		ModelName = "ForceLeaderboard",
+		DataKey = "Force",
+		ScoreFormatter = function(score) return NumberFormatter.Format(score) .. " Force" end
 	}
 }
 

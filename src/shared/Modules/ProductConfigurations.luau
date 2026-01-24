@@ -16,6 +16,10 @@ ProductConfigurations.Products = {
 	["SpeedPlus5"] = 3506884534,
 	["SpeedPlus10"] = 3506884696,
 
+	["ForcePlus1"] = 0, -- TODO: Reemplazar con ID real de DevProduct
+	["ForcePlus5"] = 0, -- TODO: Reemplazar con ID real de DevProduct
+	["ForcePlus10"] = 0, -- TODO: Reemplazar con ID real de DevProduct
+
 	["CarryUpgrade_Lvl2"] = 3506887975, 
 	["CarryUpgrade_Lvl3"] = 3506888182,
 	["CarryUpgrade_Lvl4"] = 3506888372,
@@ -70,6 +74,12 @@ ProductConfigurations.SpeedProductRewards = {
 	["SpeedPlus1"] = 1,
 	["SpeedPlus5"] = 5,
 	["SpeedPlus10"] = 10,
+}
+
+ProductConfigurations.ForceProductRewards = {
+	["ForcePlus1"] = 1,
+	["ForcePlus5"] = 5,
+	["ForcePlus10"] = 10,
 }
 
 -- Helper to find name by ID (for the Server Handler)
