@@ -284,13 +284,12 @@ function CarrySystem:Init()
 	end
 
 	dropEvent.OnServerEvent:Connect(function(player)
-		-- Solo permitir drop si no está en secuencia activa
-		if not activeSequence[player] then
-			carryingData[player] = {}
-			updateCarryGUI(player)
-			local notif = Events:FindFirstChild("ShowNotification")
-			if notif then notif:FireClient(player, "Items Dropped", "Success") end
-		end
+		-- Limpiar items (sin cancelar el timer)
+		carryingData[player] = {}
+		updateCarryGUI(player)
+
+		local notif = Events:FindFirstChild("ShowNotification")
+		if notif then notif:FireClient(player, "Items Dropped", "Success") end
 	end)
 end
 
