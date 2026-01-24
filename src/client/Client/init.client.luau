@@ -65,30 +65,6 @@ MoneyStat.Changed:Connect(function()
 	CurrencySide.CurrencyLabel.Amount.Text = Utilities.Short.en(MoneyStat.Value)
 end)
 
-
---// Popups
-local CurrencyOld = MoneyStat.Value
-MoneyStat.Changed:Connect(function(NewValue)
-	task.spawn(function()
-		if NewValue > CurrencyOld then
-			local NewPopup = script.Popup:Clone()
-			NewPopup.Size = UDim2.new(0,0,0,0)
-			NewPopup.Currency.Image = CurrencySide.CurrencyLabel.Currency.Image
-			NewPopup.Amount.Text = "+"..Utilities.Short.en(NewValue - CurrencyOld)
-			NewPopup.Position = UDim2.new(math.random(40, 60) / 100, 0, math.random(40, 60) / 100, 0)
-			NewPopup.Parent = UI.Popups
-			NewPopup:TweenSize(UDim2.new(0.176,0,0.105,0), Enum.EasingDirection.In, Enum.EasingStyle.Quad, 0.5)
-			task.wait(1)
-			NewPopup:TweenPosition(CurrencySide.Position, Enum.EasingDirection.InOut, Enum.EasingStyle.Quad, 2)
-			NewPopup:TweenSize(UDim2.new(0.1,0,0.05,0), Enum.EasingDirection.Out, Enum.EasingStyle.Quad, 2)
-			task.wait(1.4)
-			NewPopup:Destroy()
-		end
-	end)
-
-	CurrencyOld = NewValue
-end)
-
 --// Frames
 local BaseSize = {}
 for _,Frame in Frames:GetChildren() do
