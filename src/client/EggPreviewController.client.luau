@@ -204,7 +204,7 @@ for _, slot in petChancesList:GetChildren() do
 			local petName = slot.PetName.Value
 			local success = Remotes.AutoDelete:InvokeServer(petName)
 			slot.Delete.Visible = success
-			Utilities.Audio.PlayAudio("Click")
+			
 		end)
 	end
 end
@@ -212,7 +212,7 @@ end
 -- Conexiones de apertura de huevo
 buttonsFrame.Single.Click.MouseButton1Click:Connect(function()
 	Remotes.Egg:InvokeServer("Open", currentTarget.Value, 1)
-	Utilities.Audio.PlayAudio("Click")
+	
 end)
 
 currentTarget.Changed:Connect(updatePreviewContent)

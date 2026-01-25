@@ -151,7 +151,7 @@ local function addPetUI(petInstance: Instance)
 				newPetUI.Delete.Visible = false
 			end
 		end
-		Utilities.Audio.PlayAudio("Click")
+		
 	end)
 
 	-- Registrar en tabla de inventario
@@ -178,7 +178,7 @@ petFrame.Buttons.MultiDelete.Click.MouseButton1Click:Connect(function()
 	else
 		petFrame.Buttons.MultiDelete.Title.Text = "Confirm"
 	end
-	Utilities.Audio.PlayAudio("Click")
+	
 end)
 
 petFrame.Buttons.EquipBest.Click.MouseButton1Click:Connect(function()
@@ -193,13 +193,13 @@ petFrame.Buttons.EquipBest.Click.MouseButton1Click:Connect(function()
 	end
 
 	PetRemote:FireServer("Equip", equipBestList)
-	Utilities.Audio.PlayAudio("Click")
+	
 end)
 
 sideFrame.Equip.Click.MouseButton1Click:Connect(function()
 	if CurrentlySelectedID then
 		PetRemote:FireServer("Equip", CurrentlySelectedID)
-		Utilities.Audio.PlayAudio("Click")
+		
 	end
 end)
 
@@ -207,7 +207,7 @@ sideFrame.Delete.Click.MouseButton1Click:Connect(function()
 	if CurrentlySelectedID then
 		PetRemote:FireServer("Delete", CurrentlySelectedID)
 		sideFrameBlocker.Visible = true
-		Utilities.Audio.PlayAudio("Click")
+		
 	end
 end)
 
